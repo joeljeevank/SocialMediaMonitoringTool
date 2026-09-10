@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, BarChart2 } from 'lucide-react';
+import { Download, FileText, BarChart2, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 type Account = {
   id: number;
-  linkedinUsername: string;
+  username: string;
+  platform?: string;
+  status?: string;
+  profileUrl?: string;
 };
 
 export default function ReportsPage() {
@@ -49,6 +52,9 @@ export default function ReportsPage() {
   const downloadCSV = () => {
     if (analytics.length === 0) return;
     
+    const selectedAcc = accounts.find(a => String(a.id) === String(selectedAccountId));
+    const accName = selectedAcc?.username || `account_${selectedAccountId}`;
+
     const headers = ['Date', 'Followers', 'Views', 'Likes', 'Comments', 'Shares', 'Recent Posts'];
     const csvContent = [
       headers.join(','),
@@ -67,7 +73,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `linkedin_report_${selectedAccountId}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `linkedin_report_${accName}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -90,18 +96,29 @@ export default function ReportsPage() {
         <CardContent className="p-6 space-y-6">
           <div className="space-y-3">
             <label className="text-sm font-semibold text-slate-700 dark:text-gray-300">Select LinkedIn Account</label>
-            <select 
-              className="w-full bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-12 px-4 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
-              value={selectedAccountId}
-              onChange={(e) => handleFetchReportData(e.target.value)}
-            >
-              <option value="" className="text-slate-900 dark:text-gray-400 bg-white dark:bg-[#090014]">-- Select an account --</option>
-              {accounts.map(acc => (
-                <option key={acc.id} value={acc.id} className="text-slate-900 dark:text-white bg-white dark:bg-[#090014]">
-                  {acc.linkedinUsername}
+            <div className="relative">
+              <select 
+                className="w-full bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-12 px-4 pr-10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none appearance-none cursor-pointer transition-all shadow-sm font-medium"
+                value={selectedAccountId}
+                onChange={(e) => handleFetchReportData(e.target.value)}
+              >
+                <option value="" className="bg-white text-slate-500 dark:bg-slate-900 dark:text-gray-400">
+                  -- Select an account --
                 </option>
-              ))}
-            </select>
+                {accounts.map(acc => (
+                  <option 
+                    key={acc.id} 
+                    value={acc.id} 
+                    className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white py-2"
+                  >
+                    {acc.username} {acc.platform ? `(${acc.platform})` : ''}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-purple-600 dark:text-purple-400">
+                <ChevronDown className="w-5 h-5" />
+              </div>
+            </div>
           </div>
 
           {loading && (

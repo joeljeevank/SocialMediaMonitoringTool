@@ -192,7 +192,7 @@ export class AppService {
   async getAnalytics(accountId: number) {
     return this.analyticsRepo.find({
       where: { account: { id: accountId } },
-      order: { date: 'ASC' },
+      order: { date: 'ASC', id: 'ASC' },
     });
   }
 

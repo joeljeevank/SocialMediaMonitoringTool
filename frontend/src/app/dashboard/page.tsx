@@ -59,7 +59,29 @@ export default function DashboardOverview() {
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    window.location.href = 'http://localhost:3001/auth/linkedin';
+    try {
+      const res = await fetch('http://localhost:3001/accounts/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          platform: 'LinkedIn',
+          username: newUsername
+        }),
+      });
+      if (res.ok) {
+        setIsDialogOpen(false);
+        setNewUsername('');
+        fetchAccounts();
+      } else {
+        alert('Failed to connect account');
+      }
+    } catch (error) {
+      console.error('Error connecting account', error);
+      alert('Error connecting account');
+    }
+    setLoading(false);
   };
 
   const handleDisconnect = async (id: number) => {
@@ -90,11 +112,11 @@ export default function DashboardOverview() {
         
         {(role === 'user' || role === 'manager' || role === 'super_admin') && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger render={
               <Button className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-slate-900 dark:text-white gap-2 font-bold shadow-[0_0_20px_rgba(255,41,117,0.3)] hover:shadow-[0_0_25px_rgba(255,41,117,0.5)] border-none">
                 <Plus className="w-4 h-4" /> Connect Account
               </Button>
-            </DialogTrigger>
+            } />
             <DialogContent className="sm:max-w-md bg-white border-none p-0 overflow-hidden shadow-2xl">
               <div className="bg-[#0077b5] p-4 flex items-center justify-between">
                 <div className="text-slate-900 dark:text-white font-bold text-lg flex items-center gap-2">
@@ -180,8 +202,11 @@ export default function DashboardOverview() {
                 </TableRow>
               ) : (
                 accounts.map((acc) => {
-                  const latestAnalytics = acc.analytics && acc.analytics.length > 0 
-                    ? acc.analytics[acc.analytics.length - 1] 
+                  const sortedAnalytics = acc.analytics 
+                    ? [...acc.analytics].sort((a, b) => new Date(a.lastCollectionTime || a.date).getTime() - new Date(b.lastCollectionTime || b.date).getTime()) 
+                    : [];
+                  const latestAnalytics = sortedAnalytics.length > 0 
+                    ? sortedAnalytics[sortedAnalytics.length - 1] 
                     : null;
                   
                   return (

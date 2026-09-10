@@ -29,10 +29,8 @@ export class CollectorService {
     let targetUrl = '';
     if (account.organizations && account.organizations.length > 0) {
        targetUrl = `https://www.linkedin.com/company/${account.organizations[0].id}/`;
-    } else if (process.env.LINKEDIN_TARGET_PAGE_URL) {
-       targetUrl = process.env.LINKEDIN_TARGET_PAGE_URL;
     } else {
-       targetUrl = account.profileUrl; // Fallback
+       targetUrl = account.profileUrl; // Use the exact connected account URL
     }
 
     const userDataDir = path.resolve(__dirname, '..', `.linkedin-browser-profile-${accountId}`);
@@ -123,10 +121,10 @@ export class CollectorService {
           console.log('=== COMPANY PAGE DETECTED ===');
       }
 
-      if (!isCompanyPage && !targetUrl.includes('/in/')) {
+      if (!finalUrl.includes('/company/') && !finalUrl.includes('/in/')) {
          await context.close();
          console.log('=== LINKEDIN COLLECTION FAILED ===');
-         throw new BadRequestException(`Failed to reach the company page. Landed on: ${finalUrl}`);
+         throw new BadRequestException(`Profile not found. LinkedIn redirected to: ${finalUrl}. Please check if the username is correct.`);
       }
 
       // Step 3: Extract Data
@@ -138,24 +136,33 @@ export class CollectorService {
       
       try {
          const followerLocators = [
+           'a[href*="/followers/"]',
+           'ul.pv-top-card--list li',
+           '.pv-top-card--list-bullet li',
+           'span.text-body-small.t-black--light',
            '.org-top-card-summary-info-list__info-item',
            '.t-normal.t-black--light',
            'div.t-14.t-black--light',
-           'div.org-top-card-summary-info-list',
-           '.text-body-small.t-black--light',
            '.org-top-card-summary__follower-count',
            '*:has-text("followers")'
          ];
          
+         let debugTexts = [];
          for (const sel of followerLocators) {
             const elements = await page.locator(sel).all();
             for (const el of elements) {
                const text = await el.innerText().catch(()=>'');
-               if (text.toLowerCase().includes('follower')) {
+               const lowerText = text.toLowerCase();
+               if (lowerText.includes('follower') || lowerText.includes('connection')) {
+                  debugTexts.push(text);
                   followerText = text;
-                  const match = text.match(/([\d,]+)\s+follower/i);
+                  const match = text.match(/([\d,\.]+)([kKmM]?)\+?\s*(follower|connection)/i);
                   if (match) {
-                     followers = parseInt(match[1].replace(/,/g, ''), 10);
+                     let num = parseFloat(match[1].replace(/,/g, ''));
+                     const suffix = match[2].toLowerCase();
+                     if (suffix === 'k') num *= 1000;
+                     if (suffix === 'm') num *= 1000000;
+                     followers = Math.floor(num);
                      followerElementDetected = 'YES';
                      break;
                   }
@@ -163,6 +170,8 @@ export class CollectorService {
             }
             if (followers !== null) break;
          }
+         const fs = require('fs');
+         fs.writeFileSync('follower_debug.txt', debugTexts.join('\n---\n'));
       } catch (e: any) {
          console.error('Error during follower extraction:', e.message);
       }
@@ -176,12 +185,18 @@ export class CollectorService {
          console.log('=== ANALYTICS PAGE NAVIGATION ===');
          currentStep = 'Navigate to Posts';
          // The recent activity URL can vary. We'll try the main targetUrl first because recent posts load there often.
+         // Use finalUrl (which resolves LinkedIn username aliases) instead of targetUrl to avoid 404s
+         let cleanFinalUrl = finalUrl.split('?')[0];
+         if (!cleanFinalUrl.endsWith('/')) {
+             cleanFinalUrl += '/';
+         }
+
          let postsUrl = '';
-         if (targetUrl.includes('/company/')) {
-            postsUrl = targetUrl.endsWith('/') ? targetUrl + 'posts/?feedView=all' : targetUrl + '/posts/?feedView=all';
+         if (cleanFinalUrl.includes('/company/')) {
+            postsUrl = cleanFinalUrl + 'posts/?feedView=all';
          } else {
-            // Personal profiles use /recent-activity/shares/ to see ONLY posts (not likes/comments)
-            postsUrl = targetUrl.endsWith('/') ? targetUrl + 'recent-activity/shares/' : targetUrl + '/recent-activity/shares/';
+            // Personal profiles use /recent-activity/shares/ to see ONLY posts authored/shared (not likes/comments on others)
+            postsUrl = cleanFinalUrl + 'recent-activity/shares/';
          }
          
          // Add timestamp to bypass local browser cache if the user just deleted a post
@@ -240,44 +255,208 @@ export class CollectorService {
              console.log('The LinkedIn page loaded successfully, but no post elements were found (possibly user has no posts). Continuing with 0 posts.');
          } else {
          
-         const seenUrns = new Set();
-         const seenContents = new Set();
+         const seenPostsMap = new Map();
          let scrapedCount = 0;
          
          for (let i = 0; i < postElements.length && scrapedCount < 5; i++) {
             const el = postElements[i];
             
             let urn = await el.getAttribute('data-urn').catch(()=>null);
-            
-            // Fallback: try to find an inner element with data-urn if the outer doesn't have it
             if (!urn) {
                 urn = await el.locator('[data-urn]').first().getAttribute('data-urn').catch(()=>null);
             }
-            
-            if (urn && seenUrns.has(urn)) {
-               continue; // Skip duplicate URN
-            }
-            
-            const content = await el.locator('.feed-shared-update-v2__description, .break-words, .update-components-text, .update-components-update-v2__commentary span[dir="ltr"]').innerText().catch(()=>'');
-            const cleanContent = content.trim();
-            
-            if (cleanContent && seenContents.has(cleanContent)) {
-               continue; // Skip duplicate content
-            }
-            
-            if (urn) seenUrns.add(urn);
-            if (cleanContent) seenContents.add(cleanContent);
+                        // 1. Expand "...see more" button if present inside the post to expose full post description
+             try {
+               const seeMoreLoc = el.locator('button.feed-shared-inline-show-more-text__button, button:has-text("…see more"), button:has-text("see more"), button:has-text("…more")');
+               if (await seeMoreLoc.count() > 0) {
+                 await seeMoreLoc.first().click({ timeout: 1000 }).catch(() => {});
+               }
+             } catch (e) {}
 
-            const author = await el.locator('.update-components-actor__name, .feed-shared-actor__name, span.update-components-actor__title').innerText().catch(()=>'');
-            const postDate = await el.locator('.update-components-actor__sub-description, .feed-shared-actor__sub-description, span.update-components-actor__sub-description-t-black--light').innerText().catch(()=>'');
-            
-            let postUrl = '';
-            if (urn) {
-                postUrl = `https://www.linkedin.com/feed/update/${urn}/`;
-            } else {
-                const href = await el.locator('a').first().getAttribute('href').catch(()=>null);
-                if (href) postUrl = href.startsWith('http') ? href : `https://www.linkedin.com${href}`;
-            }
+             // 2. Extract post description using prioritized LinkedIn commentary selectors
+             let rawContent = '';
+             const descSelectors = [
+               '.feed-shared-inline-show-more-text',
+               '.feed-shared-update-v2__description-wrapper',
+               '.feed-shared-update-v2__description',
+               '.update-components-text',
+               '.update-components-update-v2__commentary',
+               '.feed-shared-text-view',
+               '.feed-shared-text',
+               '[data-ad-preview="message"]',
+               '.feed-shared-main-content'
+             ];
+
+             for (const dSel of descSelectors) {
+               const dLoc = el.locator(dSel);
+               const count = await dLoc.count().catch(() => 0);
+               if (count > 0) {
+                 const t = await dLoc.first().innerText().catch(() => '');
+                 if (t && t.trim().length > 0) {
+                   rawContent = t.trim();
+                   break;
+                 }
+               }
+             }
+
+             // 3. Fallback: extract description directly from post element
+             if (!rawContent) {
+               rawContent = await el.evaluate((node: any) => {
+                 const textEls = node.querySelectorAll('[dir="ltr"], [dir="rtl"], .update-components-text, .feed-shared-inline-show-more-text');
+                 for (let i = 0; i < textEls.length; i++) {
+                   const elItem = textEls[i] as HTMLElement;
+                   if (!elItem.closest('.feed-shared-actor, .update-components-actor, .social-details-social-counts, .feed-shared-social-actions, .feed-shared-social-action-bar, button')) {
+                     const text = elItem.innerText || elItem.textContent || '';
+                     if (text.trim().length > 0) return text.trim();
+                   }
+                 }
+                 return '';
+               }).catch(() => '');
+             }
+
+             const cleanContent = rawContent
+               .replace(/…\s*see more/gi, '')
+               .replace(/\.\.\.\s*see more/gi, '')
+               .replace(/…\s*more/gi, '')
+               .trim();
+
+             // Extract author with fallback
+             let author = '';
+             const authorSelectors = [
+               '.update-components-actor__name',
+               '.feed-shared-actor__name',
+               'span.update-components-actor__title',
+               '.update-components-actor__title'
+             ];
+             for (const aSel of authorSelectors) {
+               const aLoc = el.locator(aSel);
+               if (await aLoc.count().catch(() => 0) > 0) {
+                 const text = await aLoc.first().innerText().catch(() => '');
+                 if (text && text.trim()) {
+                   let cleanedAuthor = text
+                     .replace(/•?\s*Verified/gi, '')
+                     .replace(/•?\s*You\b/gi, '')
+                     .replace(/[•·\s]+$/, '')
+                     .trim();
+
+                   // If author name is duplicated (e.g. "Joel Jeevan Kumar S Joel Jeevan Kumar S")
+                   const words = cleanedAuthor.split(/\s+/);
+                   if (words.length >= 2 && words.length % 2 === 0) {
+                     const half = words.length / 2;
+                     const firstHalf = words.slice(0, half).join(' ');
+                     const secondHalf = words.slice(half).join(' ');
+                     if (firstHalf.toLowerCase() === secondHalf.toLowerCase()) {
+                       cleanedAuthor = firstHalf;
+                     }
+                   }
+                   author = cleanedAuthor;
+                   break;
+                 }
+               }
+             }
+
+             let postUrl = '';
+             if (urn) {
+                 postUrl = `https://www.linkedin.com/feed/update/${urn}/`;
+             } else {
+                 const href = await el.locator('a').first().getAttribute('href').catch(()=>null);
+                 if (href) postUrl = href.startsWith('http') ? href : `https://www.linkedin.com${href}`;
+             }
+
+             // Extract post date with real-time accuracy
+             let postDate = '';
+
+             // Priority 1: LinkedIn Activity URN Snowflake ID contains exact creation timestamp (first 42 bits)
+             const activityMatch = (urn || postUrl || '').match(/(?:activity|share)[:/]+(\d{17,20})/);
+             if (activityMatch) {
+               try {
+                 const activityId = BigInt(activityMatch[1]);
+                 const timestampMs = Number(activityId >> BigInt(22));
+                 const date = new Date(timestampMs);
+                 if (!isNaN(date.getTime()) && date.getFullYear() > 2005 && date.getTime() <= Date.now() + 86400000) {
+                   const diffMs = Date.now() - date.getTime();
+                   if (diffMs < 0) {
+                     postDate = 'Just now';
+                   } else {
+                     const diffSecs = Math.floor(diffMs / 1000);
+                     if (diffSecs < 60) {
+                       postDate = 'Just now';
+                     } else {
+                       const diffMins = Math.floor(diffSecs / 60);
+                       if (diffMins < 60) {
+                         postDate = diffMins === 1 ? '1 minute ago' : `${diffMins} minutes ago`;
+                       } else {
+                         const diffHours = Math.floor(diffMins / 60);
+                         if (diffHours < 24) {
+                           postDate = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+                         } else {
+                           const diffDays = Math.floor(diffHours / 24);
+                           if (diffDays < 7) {
+                             postDate = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+                           } else {
+                             const diffWeeks = Math.floor(diffDays / 7);
+                             if (diffWeeks < 5) {
+                               postDate = diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+                             } else {
+                               const diffMonths = Math.floor(diffDays / 30);
+                               if (diffMonths < 12) {
+                                 postDate = diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
+                               } else {
+                                 const diffYears = Math.floor(diffDays / 365);
+                                 postDate = diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
+                               }
+                             }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               } catch (e) {}
+             }
+
+             // Priority 2: Fallback to DOM selectors
+             if (!postDate) {
+               const dateSelectors = [
+                 '.update-components-actor__sub-description',
+                 '.feed-shared-actor__sub-description',
+                 'span.update-components-actor__sub-description-t-black--light'
+               ];
+               for (const dSel of dateSelectors) {
+                 const dLoc = el.locator(dSel);
+                 if (await dLoc.count().catch(() => 0) > 0) {
+                   const text = await dLoc.first().innerText().catch(() => '');
+                   if (text && text.trim()) {
+                     let cleanedDate = text.trim();
+                     cleanedDate = cleanedDate.replace(/•?\s*visible to.*$/i, '').trim();
+
+                     const longMatch = cleanedDate.match(/(\d+\s*(?:second|minute|hour|day|week|month|year)s?\s*ago)/i);
+                     if (longMatch) {
+                       cleanedDate = longMatch[1];
+                     } else {
+                       const shortMatch = cleanedDate.match(/^(\d+)(mo|[smhdwy])/i);
+                       if (shortMatch) {
+                         const num = parseInt(shortMatch[1], 10);
+                         const u = shortMatch[2].toLowerCase();
+                         const unitMap: Record<string, string> = {
+                           s: num === 1 ? '1 second ago' : `${num} seconds ago`,
+                           m: num === 1 ? '1 minute ago' : `${num} minutes ago`,
+                           h: num === 1 ? '1 hour ago' : `${num} hours ago`,
+                           d: num === 1 ? '1 day ago' : `${num} days ago`,
+                           w: num === 1 ? '1 week ago' : `${num} weeks ago`,
+                           mo: num === 1 ? '1 month ago' : `${num} months ago`,
+                           y: num === 1 ? '1 year ago' : `${num} years ago`
+                         };
+                         cleanedDate = unitMap[u] ? unitMap[u] : shortMatch[0];
+                       }
+                     }
+                     cleanedDate = cleanedDate.replace(/[•·\s]+$/, '').trim();
+                     postDate = cleanedDate;
+                     break;
+                   }
+                 }
+               }
+             }
             
             let likes: number | null = null;
             const likeSelectors = [
@@ -307,7 +486,7 @@ export class CollectorService {
             let comments: number | null = null;
             let extractedCommentText = '';
             console.log(`\n=== COMMENT EXTRACTION DEBUG ===`);
-            console.log(`Post: ${content.trim().substring(0, 30)}...`);
+            console.log(`Post Description: ${cleanContent.substring(0, 40)}...`);
             const commentSelectors = [
               'li.social-details-social-counts__comments button',
               'li.social-details-social-counts__item--right-aligned button',
@@ -350,24 +529,121 @@ export class CollectorService {
                console.log(`Final comment count: ${comments}`);
             }
 
+            // Extract impressions / views with fallback selectors
+            let impressions: number | null = null;
+            let extractedImpressionText = '';
+            console.log(`\n=== IMPRESSION / VIEW EXTRACTION DEBUG ===`);
+            const impressionSelectors = [
+              'a[href*="analytics/post-summary"]',
+              'a[href*="/analytics/"]',
+              'span.ca-entry-point__num-views',
+              '.ca-entry-point',
+              '.feed-shared-bottom-bar__analytics-button',
+              'button[aria-label*="impression"]',
+              'a[aria-label*="impression"]',
+              'button[aria-label*="view"]',
+              'a[aria-label*="view"]',
+              '[data-test-id*="analytics"]',
+              'div.feed-shared-bottom-bar',
+              'div.ca-entry-point',
+              'span:has-text("impression")',
+              'button:has-text("impression")',
+              'a:has-text("impression")',
+              'span:has-text("view")',
+              'button:has-text("view")',
+              'a:has-text("view")'
+            ];
+
+            for (const iSel of impressionSelectors) {
+              const iEls = await el.locator(iSel).all().catch(() => []);
+              for (const iEl of iEls) {
+                const text = await iEl.innerText().catch(() => '');
+                const aria = await iEl.getAttribute('aria-label').catch(() => '');
+                const t = (text + ' ' + (aria || '')).toLowerCase();
+
+                // Exclude generic navigation and action buttons
+                const isNavAction = 
+                  t.includes('view profile') || 
+                  t.includes('view post') || 
+                  t.includes('view full') || 
+                  t.includes('view more') || 
+                  t.includes('view on') ||
+                  t.includes('react to');
+
+                if (t && !isNavAction && (t.includes('impression') || t.includes('view'))) {
+                  const match = 
+                    t.match(/([\d,]+)\s*(?:post\s*)?impression/i) || 
+                    t.match(/(?:impression|view)s?[:\s]+([\d,]+)/i) ||
+                    t.match(/([\d,]+)\s*(?:post\s*)?view/i);
+                  if (match) {
+                    impressions = parseInt(match[1].replace(/,/g, ''), 10);
+                    extractedImpressionText = t.trim();
+                    break;
+                  }
+                }
+              }
+              if (impressions !== null) break;
+            }
+
+            // Fallback: Check whole card text for "X impressions"
+            if (impressions === null) {
+              const fullElText = await el.innerText().catch(() => '');
+              const match = 
+                fullElText.match(/([\d,]+)\s*(?:post\s*)?impression/i) || 
+                fullElText.match(/(?:analytics|impressions?)[:\s]+([\d,]+)/i);
+              if (match) {
+                impressions = parseInt(match[1].replace(/,/g, ''), 10);
+                extractedImpressionText = match[0];
+              }
+            }
+
+            console.log(`Impression text: ${extractedImpressionText || 'none'}`);
+            console.log(`Final Impressions / Views: ${impressions !== null ? impressions : 0}`);
+
             console.log(`\n=== POST ENGAGEMENT ===`);
-            console.log(`Post: ${content.trim().substring(0, 30)}...`);
+            console.log(`Post Description: ${cleanContent.substring(0, 60)}...`);
+            console.log(`Impressions: ${impressions !== null ? impressions : 0}`);
             console.log(`Reactions: ${likes !== null ? likes : 'unavailable'}`);
             console.log(`Comments: ${comments !== null ? comments : 'unavailable'}`);
             console.log(`Post Date: ${postDate.trim()}`);
             console.log(`Post URL: ${postUrl}`);
             
-            if (cleanContent || author.trim()) {
-              postsScraped.push({
-                 author: author.trim(),
-                 content: cleanContent,
-                 postUrl,
-                 postDate: postDate.trim(),
-                 likes,
-                 comments,
-                 date: new Date().toISOString()
-              });
-              scrapedCount++;
+            const isDeletedPost = 
+              cleanContent.toLowerCase().includes('this post has been deleted') ||
+              cleanContent.toLowerCase().includes('this post was deleted') ||
+              cleanContent.toLowerCase().includes('post has been removed') ||
+              cleanContent.toLowerCase().includes('this post is unavailable') ||
+              cleanContent.toLowerCase().includes('this post is no longer available');
+
+            if (!isDeletedPost && (cleanContent || author.trim())) {
+              const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+              const dedupeKey = `${normalize(author)}|${normalize(postDate)}|${normalize(cleanContent)}`;
+              
+              if (seenPostsMap.has(dedupeKey)) {
+                 // Duplicate found (likely a nested/ghost element). Merge engagements.
+                 const existing = seenPostsMap.get(dedupeKey);
+                 if (likes !== null && (existing.likes === null || likes > existing.likes)) existing.likes = likes;
+                 if (comments !== null && (existing.comments === null || comments > existing.comments)) existing.comments = comments;
+                 if (impressions !== null && (existing.impressions === null || impressions > existing.impressions)) {
+                   existing.impressions = impressions;
+                   existing.views = impressions;
+                 }
+              } else {
+                 const newPost = {
+                   author: normalize(author),
+                   content: normalize(cleanContent),
+                   postUrl,
+                   postDate: normalize(postDate),
+                   likes,
+                   comments,
+                   impressions: impressions !== null ? impressions : 0,
+                   views: impressions !== null ? impressions : 0,
+                   date: new Date().toISOString()
+                 };
+                 seenPostsMap.set(dedupeKey, newPost);
+                 postsScraped.push(newPost);
+                 scrapedCount++;
+              }
             }
              }
          } // End of else block for postElementsDetected > 0
@@ -391,37 +667,23 @@ export class CollectorService {
       // Save Analytics
       const newLikes = postsScraped.reduce((sum, p) => sum + (p.likes || 0), 0);
       const newComments = postsScraped.reduce((sum, p) => sum + (p.comments || 0), 0);
+      const newViews = postsScraped.reduce((sum, p) => sum + (p.impressions || p.views || 0), 0);
       const newFollowers = followers !== null ? followers : 0;
       const newRecentPosts = postsScraped.length;
 
-      const lastAnalytics = await this.analyticsRepo.findOne({
-        where: { account: { id: accountId } },
-        order: { id: 'DESC' }
-      });
-
-      let finalCollectionTime = timestamp;
-      if (lastAnalytics) {
-        if (
-          lastAnalytics.likes === newLikes &&
-          lastAnalytics.comments === newComments &&
-          lastAnalytics.followers === newFollowers &&
-          lastAnalytics.recentPosts === newRecentPosts
-        ) {
-          finalCollectionTime = lastAnalytics.lastCollectionTime || timestamp;
-        }
-      }
+      const finalCollectionTime = timestamp;
 
       const newAnalytics = this.analyticsRepo.create({
         date: dateStr,
         likes: newLikes,
         comments: newComments,
         shares: 0, 
-        views: 0, 
+        views: newViews, 
         followers: newFollowers, 
         recentPosts: newRecentPosts,
         account: account,
         dataSource: 'Scraper',
-        unavailableMetrics: 'impressions,unique_viewers,shares,views,demographics' + (followers === null ? ',followers' : ''),
+        unavailableMetrics: 'unique_viewers,shares,demographics' + (followers === null ? ',followers' : ''),
         lastCollectionTime: finalCollectionTime
       });
       await this.analyticsRepo.save(newAnalytics);
@@ -434,7 +696,7 @@ export class CollectorService {
         data: {
           followers,
           posts: postsScraped,
-          unavailable: ['impressions', 'unique_viewers', 'demographics', 'views', 'shares'],
+          unavailable: ['unique_viewers', 'demographics', 'shares'],
           lastCollectionTime: finalCollectionTime,
           dataSource: 'Scraper'
         }
