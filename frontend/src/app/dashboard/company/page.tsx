@@ -89,26 +89,26 @@ export default function CompanyDashboard() {
   return (
     <div className="space-y-8 text-slate-900 dark:text-white min-h-screen pb-12">
       {/* HEADER SECTION */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#090014]/80 via-[#1a0b2e]/60 to-[#090014]/80 p-8 rounded-2xl border border-purple-200 dark:border-purple-500/30 shadow-[0_0_50px_rgba(168,85,247,0.15)] backdrop-blur-xl">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-purple-600/10 blur-3xl mix-blend-screen pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl mix-blend-screen pointer-events-none" />
+      <div className="relative overflow-hidden bg-slate-900/60 p-8 rounded-2xl border border-cyan-500/20 shadow-[0_0_40px_rgba(6,182,212,0.1)] backdrop-blur-xl">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl mix-blend-screen pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl mix-blend-screen pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-purple-600/20 to-blue-600/20 p-1 shadow-inner border border-slate-200 dark:border-white/10 flex-shrink-0">
-              <div className="w-full h-full rounded-xl bg-slate-900/80 flex items-center justify-center overflow-hidden backdrop-blur-md">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-indigo-500/20 p-1 shadow-inner border border-cyan-500/30 flex-shrink-0">
+              <div className="w-full h-full rounded-xl bg-slate-950/80 flex items-center justify-center overflow-hidden backdrop-blur-md">
                 {loading ? (
-                  <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                  <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
                 ) : company?.logoV2?.original ? (
                   <img src={company.logoV2.original} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
-                  <Building2 className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  <Building2 className="w-8 h-8 text-cyan-400" />
                 )}
               </div>
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-cyan-300">
                   {loading ? 'Loading...' : company?.localizedName || 'Company Analytics'}
                 </h1>
                 {!loading && (
@@ -118,9 +118,9 @@ export default function CompanyDashboard() {
                   </span>
                 )}
               </div>
-              <p className="text-slate-500 dark:text-gray-400 text-sm flex items-center gap-2">
+              <p className="text-slate-400 text-sm flex items-center gap-2">
                 <span className="opacity-80">Administered by:</span> 
-                <span className="font-semibold text-purple-700 dark:text-purple-300">{loading ? '...' : me?.name || 'Unknown'}</span>
+                <span className="font-semibold text-cyan-400">{loading ? '...' : me?.name || 'Unknown'}</span>
               </p>
             </div>
           </div>
@@ -128,12 +128,12 @@ export default function CompanyDashboard() {
             <Button 
               onClick={fetchDashboardData} 
               disabled={loading} 
-              className="bg-white/10 hover:bg-white/20 text-slate-900 dark:text-white border border-slate-200 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Syncing Data...' : 'Sync Now'}
             </Button>
-            <div className="text-xs text-gray-500 font-medium tracking-wide">
+            <div className="text-xs text-slate-500 font-medium tracking-wide">
               Data retrieved via Official LinkedIn APIs
             </div>
           </div>

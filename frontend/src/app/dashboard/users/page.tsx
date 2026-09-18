@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, Trash2, Plus } from 'lucide-react';
+import { Users, Trash2, Plus, Search, Shield, Building, Mail, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function UserManagementPage() {
   const router = useRouter();
   const [managers, setManagers] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
 
   useEffect(() => {
@@ -55,67 +56,124 @@ export default function UserManagementPage() {
 
   if (role !== 'super_admin') return null;
 
+  const filteredManagers = managers.filter(m => 
+    (m.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (m.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (m.companyName || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6 select-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-            <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            Registered Users
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+              <Users className="w-6 h-6" />
+            </div>
+            <span>User Management</span>
           </h1>
-          <p className="text-slate-500 dark:text-gray-400 mt-1">View and manage all users in the system.</p>
+          <p className="text-slate-500 dark:text-gray-400 text-xs sm:text-sm mt-1">
+            Authorize team members, managers, and system administrators
+          </p>
         </div>
-        <Button asChild className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-slate-900 dark:text-white font-bold h-11 px-6 rounded-xl shadow-lg border-none">
-          <Link href="/dashboard/users/add">
-            <Plus className="w-5 h-5 mr-2" />
+
+        <Button asChild className="bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-bold h-11 px-6 rounded-2xl shadow-lg shadow-cyan-500/25 border-none transition-all cursor-pointer">
+          <Link href="/dashboard/users/add" prefetch={true}>
+            <Plus className="w-4 h-4 mr-2" />
             Add New User
           </Link>
         </Button>
       </div>
 
-      <Card className="bg-white/80 dark:bg-[#090014]/40 border border-purple-200 dark:border-purple-500/50 shadow-xl overflow-hidden h-fit">
-        <CardHeader className="px-6 pt-6 pb-4">
-          <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">All Users</CardTitle>
+      <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-xl rounded-3xl overflow-hidden">
+        <CardHeader className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>All Registered Users</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold border border-cyan-500/20">
+              {managers.length}
+            </span>
+          </CardTitle>
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search user, email, company..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-9 pl-9 pr-3.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-purple-900/10">
-              <TableRow className="border-b border border-purple-200 dark:border-purple-500/50">
-                <TableHead className="text-purple-700 dark:text-purple-300">Name</TableHead>
-                <TableHead className="text-purple-700 dark:text-purple-300">System Role</TableHead>
-                <TableHead className="text-purple-700 dark:text-purple-300">Company</TableHead>
-                <TableHead className="text-purple-700 dark:text-purple-300">Company Role</TableHead>
-                <TableHead className="text-purple-700 dark:text-purple-300">Email</TableHead>
-                <TableHead className="text-purple-700 dark:text-purple-300">Phone</TableHead>
-                <TableHead className="text-right text-purple-700 dark:text-purple-300">Actions</TableHead>
+            <TableHeader className="bg-slate-50 dark:bg-white/5">
+              <TableRow className="border-b border-slate-200 dark:border-white/10 hover:bg-transparent">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-cyan-300">User</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-cyan-300">System Role</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-cyan-300">Company & Role</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-cyan-300">Contact Email</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-cyan-300">Phone</TableHead>
+                <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-cyan-300">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {managers.length === 0 ? (
+              {filteredManagers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">No users found.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-12 text-slate-500 dark:text-gray-400">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <Users className="w-8 h-8 text-slate-400" />
+                      <p className="font-semibold text-sm">No users found</p>
+                      <p className="text-xs text-slate-400">Add a new manager or user to grant them access to MonitorHQ.</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
-                managers.map(m => (
-                  <TableRow key={m.id} className="border-b border border-purple-200 dark:border-purple-500/50 hover:bg-purple-500/5 transition-colors">
-                    <TableCell className="font-medium text-slate-900 dark:text-white">{m.name}</TableCell>
+                filteredManagers.map(m => (
+                  <TableRow key={m.id} className="border-b border-slate-100 dark:border-white/5 hover:bg-cyan-500/5 transition-colors">
+                    <TableCell className="font-medium text-slate-900 dark:text-white">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold uppercase shadow-sm">
+                          {m.name?.charAt(0) || 'U'}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{m.name}</p>
+                          <p className="text-[11px] text-slate-400">ID: #{m.id}</p>
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 capitalize">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                        <Shield className="w-3 h-3" />
                         {m.role?.replace('_', ' ') || 'User'}
                       </span>
                     </TableCell>
-                    <TableCell className="text-slate-600 dark:text-gray-300">{m.companyName}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-gray-300">{m.companyRole || '-'}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-gray-300">{m.email}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-gray-300">{m.phone}</TableCell>
+                    <TableCell className="text-slate-600 dark:text-gray-300">
+                      <p className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1">
+                        <Building className="w-3 h-3 text-cyan-400" />
+                        {m.companyName || '-'}
+                      </p>
+                      <p className="text-[11px] text-slate-400">{m.companyRole || '-'}</p>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-gray-300 text-xs">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <Mail className="w-3 h-3 text-slate-400" />
+                        {m.email}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-gray-300 text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-slate-400" />
+                        {m.phone || '-'}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         onClick={() => handleDeleteManager(m.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-xl text-xs font-semibold cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -128,3 +186,4 @@ export default function UserManagementPage() {
     </div>
   );
 }
+

@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, User, Building, Briefcase, Shield, Phone, Mail, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AddUserPage() {
   const router = useRouter();
@@ -41,16 +41,16 @@ export default function AddUserPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: managerName,
-          companyName: managerCompany,
-          companyRole: managerCompanyRole,
-          phone: managerPhone,
-          email: managerEmail,
+          name: managerName.trim(),
+          companyName: managerCompany.trim(),
+          companyRole: managerCompanyRole.trim(),
+          phone: managerPhone.trim(),
+          email: managerEmail.trim(),
           role: managerRole,
         }),
       });
       if (res.ok) {
-        setManagerSuccess(`Success! Account created for ${managerName}. An email with the login credentials has been sent to ${managerEmail}.`);
+        setManagerSuccess(`Account created for ${managerName}! An automated credentials email has been dispatched to ${managerEmail}.`);
         setManagerName('');
         setManagerCompany('');
         setManagerCompanyRole('');
@@ -58,89 +58,170 @@ export default function AddUserPage() {
         setManagerEmail('');
         setManagerRole('user');
       } else {
-        const errorData = await res.json();
-        setManagerError(errorData.message || 'Failed to create user.');
+        const errorData = await res.json().catch(() => ({}));
+        setManagerError(errorData.message || 'Failed to create user account.');
       }
-    } catch (error) {
-      console.error('Failed to add user', error);
-      setManagerError('A network error occurred. Is the backend running?');
+    } catch {
+      setManagerError('Network error occurred. Unable to communicate with the backend server.');
+    } finally {
+      setManagerAddLoading(false);
     }
-    setManagerAddLoading(false);
   };
 
   if (role !== 'super_admin') return null;
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-            <UserPlus className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            Add New User
-          </h1>
-          <p className="text-slate-500 dark:text-gray-400 mt-1">Create a new user account in the system.</p>
+    <div className="space-y-6 max-w-2xl mx-auto select-none">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+          >
+            <Link href="/dashboard/users" prefetch={true}>
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+              <UserPlus className="w-6 h-6 text-cyan-400" />
+              <span>Register New User</span>
+            </h1>
+            <p className="text-slate-500 dark:text-gray-400 text-xs sm:text-sm mt-0.5">
+              Create manager or admin accounts with platform access
+            </p>
+          </div>
         </div>
       </div>
 
-      <Card className="bg-white/80 dark:bg-[#090014]/40 border border-purple-200 dark:border-purple-500/50 shadow-xl">
-        <CardHeader className="px-6 pt-6 pb-4">
-          <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            User Details
+      <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-xl rounded-3xl overflow-hidden">
+        <CardHeader className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/5">
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <User className="w-4 h-4 text-cyan-400" />
+            User Credentials & Profile
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-6 pb-6">
+        <CardContent className="p-6 sm:p-8">
           {managerSuccess && (
-            <div className="mb-4 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.15)] flex flex-col gap-1 animate-in slide-in-from-top-2">
-              <span className="font-bold text-emerald-400">Account Created</span>
-              <span className="text-emerald-300/80 text-sm">{managerSuccess}</span>
+            <div className="mb-5 p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-start gap-3 animate-in fade-in">
+              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="text-xs sm:text-sm">
+                <p className="font-bold">Account Created</p>
+                <p className="mt-0.5 opacity-90">{managerSuccess}</p>
+              </div>
             </div>
           )}
           {managerError && (
-            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] flex flex-col gap-1 animate-in slide-in-from-top-2">
-              <span className="font-bold text-red-400">Registration Failed</span>
-              <span className="text-red-300/80 text-sm">{managerError}</span>
+            <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl flex items-start gap-3 animate-in fade-in">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="text-xs sm:text-sm">
+                <p className="font-bold">Creation Failed</p>
+                <p className="mt-0.5 opacity-90">{managerError}</p>
+              </div>
             </div>
           )}
-          <form onSubmit={handleAddManager} className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-slate-600 dark:text-gray-300 font-medium">Full Name</Label>
-              <Input value={managerName} onChange={e => setManagerName(e.target.value)} required className="bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-11 px-4 rounded-xl focus:ring-2 focus:ring-purple-500" />
+          <form onSubmit={handleAddManager} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-cyan-400" />
+                Full Name
+              </Label>
+              <input
+                type="text"
+                placeholder="e.g. John Doe"
+                value={managerName}
+                onChange={(e) => setManagerName(e.target.value)}
+                required
+                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm"
+              />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="text-slate-600 dark:text-gray-300 font-medium">Company Name</Label>
-                <Input value={managerCompany} onChange={e => setManagerCompany(e.target.value)} required className="bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-11 px-4 rounded-xl focus:ring-2 focus:ring-purple-500" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Building className="w-3.5 h-3.5 text-cyan-400" />
+                  Company Name
+                </Label>
+                <input
+                  type="text"
+                  placeholder="e.g. Acme Corp"
+                  value={managerCompany}
+                  onChange={(e) => setManagerCompany(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm"
+                />
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-600 dark:text-gray-300 font-medium">Company Role</Label>
-                <Input value={managerCompanyRole} onChange={e => setManagerCompanyRole(e.target.value)} placeholder="e.g. Marketing Director" required className="bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-11 px-4 rounded-xl focus:ring-2 focus:ring-purple-500" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-cyan-400" />
+                  Company Role / Title
+                </Label>
+                <input
+                  type="text"
+                  placeholder="e.g. Marketing Director"
+                  value={managerCompanyRole}
+                  onChange={(e) => setManagerCompanyRole(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm"
+                />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="text-slate-600 dark:text-gray-300 font-medium">System Role</Label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                  System Role
+                </Label>
                 <select 
                   value={managerRole} 
-                  onChange={e => setManagerRole(e.target.value)} 
+                  onChange={(e) => setManagerRole(e.target.value)} 
                   required 
-                  className="w-full bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-11 px-4 rounded-xl focus:ring-2 focus:ring-purple-500 appearance-none outline-none"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white h-11 px-3.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm cursor-pointer"
                 >
-                  <option value="user" className="bg-slate-50 dark:bg-[#090014]">User</option>
-                  <option value="super_admin" className="bg-slate-50 dark:bg-[#090014]">Super Admin</option>
+                  <option value="user" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">User (Manager View)</option>
+                  <option value="super_admin" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Super Admin (Full Access)</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-600 dark:text-gray-300 font-medium">Phone</Label>
-                <Input value={managerPhone} onChange={e => setManagerPhone(e.target.value)} required className="bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-11 px-4 rounded-xl focus:ring-2 focus:ring-purple-500" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                  Phone Number
+                </Label>
+                <input
+                  type="text"
+                  placeholder="+1 555 0192"
+                  value={managerPhone}
+                  onChange={(e) => setManagerPhone(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm"
+                />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-slate-600 dark:text-gray-300 font-medium">Email (Username)</Label>
-              <Input type="email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} required className="bg-white/60 dark:bg-black/40 border border-purple-200 dark:border-purple-500/50 text-slate-900 dark:text-white h-11 px-4 rounded-xl focus:ring-2 focus:ring-purple-500" />
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-cyan-400" />
+                Login Email Address
+              </Label>
+              <input
+                type="email"
+                placeholder="name@company.com"
+                value={managerEmail}
+                onChange={(e) => setManagerEmail(e.target.value)}
+                required
+                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm"
+              />
             </div>
-            <Button type="submit" disabled={managerAddLoading} className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-slate-900 dark:text-white font-bold h-11 rounded-xl shadow-lg border-none mt-4">
-              {managerAddLoading ? 'Creating...' : 'Create User & Send Email'}
+
+            <Button 
+              type="submit" 
+              disabled={managerAddLoading}
+              className="w-full bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-bold h-11 rounded-xl shadow-lg shadow-cyan-500/25 border-none mt-4 transition-all cursor-pointer"
+            >
+              {managerAddLoading ? 'Creating User Account...' : 'Create Account & Send Credentials'}
             </Button>
           </form>
         </CardContent>
@@ -148,3 +229,4 @@ export default function AddUserPage() {
     </div>
   );
 }
+

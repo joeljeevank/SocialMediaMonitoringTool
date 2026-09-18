@@ -4,40 +4,44 @@
 
 @layer base {
   :root {
-    --background: #f8fafc; /* slate-50 */
-    --foreground: #0f172a; /* slate-900 */
+    --background: #f8fafc;
+    --foreground: #090d16;
     --card: #ffffff;
-    --card-foreground: #0f172a;
-    --border: #e2e8f0; /* slate-200 */
+    --card-foreground: #090d16;
+    --border: #e2e8f0;
   }
 
   .dark {
-    --background: #090014;
-    --foreground: #ffffff;
-    --card: #090014;
-    --card-foreground: #ffffff;
-    --border: #8b5cf6; /* purple-500 */
+    --background: #06080e;
+    --foreground: #f8fafc;
+    --card: #0b0f19;
+    --card-foreground: #f8fafc;
+    --border: #1e293b;
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  /* The animated background patterns can be added here if desired */
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(255, 41, 117, 0.05), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(140, 26, 255, 0.05), transparent 25%);
+    radial-gradient(circle at 20% 20%, rgba(6, 182, 212, 0.04), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.04), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.03), transparent 50%);
+  background-attachment: fixed;
 }
 
 .dark body {
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(255, 41, 117, 0.15), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(140, 26, 255, 0.15), transparent 25%);
+    radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.12), transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.12), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.06), transparent 50%);
+  background-attachment: fixed;
 }
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -45,10 +49,43 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(140, 26, 255, 0.2);
+  background-color: rgba(6, 182, 212, 0.2);
   border-radius: 20px;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(140, 26, 255, 0.5);
+  background-color: rgba(6, 182, 212, 0.35);
 }
+
+/* Clean cursor and interaction standards */
+button, [role="button"], a, select {
+  cursor: pointer;
+}
+
+input, textarea, [contenteditable="true"] {
+  cursor: text;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .glass {
+  background: rgba(11, 15, 25, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Cyber Glow Accents */
+.cyber-glow-cyan {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.25);
+}
+
+.cyber-glow-indigo {
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
+}
+
+

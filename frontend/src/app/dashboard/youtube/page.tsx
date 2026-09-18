@@ -406,17 +406,17 @@ export default function YouTubeDashboardPage() {
                   setVideoPage(1);
                 }
               }}
-              className="w-full bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-purple-500/20 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
+              className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-cyan-500/20 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
-              <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-1">
+              <option value="all" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
                 🌐 All Channels ({channels.length})
               </option>
               {channels.map((ch) => (
-                <option key={ch.id} value={ch.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-1">
+                <option key={ch.id} value={ch.id} className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
                   ▶ {ch.title} {ch.customUrl ? `(${ch.customUrl})` : ''}
                 </option>
               ))}
-              <option value="__add__" className="bg-white dark:bg-slate-900 text-red-500 font-bold py-1">
+              <option value="__add__" className="bg-white dark:bg-[#090d16] text-red-500 font-bold py-1">
                 + Track / Connect Channel...
               </option>
             </select>
@@ -428,12 +428,12 @@ export default function YouTubeDashboardPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-purple-500/20 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
+              className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-cyan-500/20 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
-              <option value="7d" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Last 7 Days</option>
-              <option value="28d" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Last 28 Days</option>
-              <option value="90d" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Last 90 Days</option>
-              <option value="1y" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Last Year</option>
+              <option value="7d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 7 Days</option>
+              <option value="28d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 28 Days</option>
+              <option value="90d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 90 Days</option>
+              <option value="1y" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last Year</option>
             </select>
             <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
@@ -443,7 +443,7 @@ export default function YouTubeDashboardPage() {
             onClick={handleSync}
             disabled={syncing || channels.length === 0}
             variant="outline"
-            className="rounded-full text-xs font-semibold px-4 py-2.5 border-purple-200 dark:border-purple-500/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm"
+            className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-cyan-500/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-red-500' : ''}`} />
             {syncing ? 'Syncing...' : 'Sync Now'}
@@ -452,7 +452,7 @@ export default function YouTubeDashboardPage() {
           {/* Connect Account Button */}
           <Button
             onClick={() => handleConnectClick('track')}
-            className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white text-xs font-semibold px-5 py-2.5 shadow-md shadow-red-600/25 transition-all flex items-center gap-1.5"
+            className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white text-xs font-semibold px-5 py-2.5 shadow-md shadow-red-600/25 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Connect / Track Channel
