@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Users, Settings, LogOut, UserPlus, User, FileText } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { YoutubeIcon } from '@/components/icons/youtube-icon';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -44,6 +45,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${pathname === '/dashboard' ? 'bg-gradient-to-r from-purple-100 dark:from-purple-500/20 to-pink-100 text-slate-900 dark:text-white border border-purple-200 dark:border-purple-500/30 shadow-inner' : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent'}`}>
             <LayoutDashboard className="w-5 h-5" />
             LinkedIn Dashboard
+          </Link>
+          <Link href="/dashboard/youtube" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${pathname.startsWith('/dashboard/youtube') ? 'bg-gradient-to-r from-purple-100 dark:from-purple-500/20 to-pink-100 text-slate-900 dark:text-white border border-purple-200 dark:border-purple-500/30 shadow-inner' : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent'}`}>
+            <YoutubeIcon className="w-5 h-5 text-red-500" />
+            YouTube Dashboard
           </Link>
           {userRole === 'super_admin' && (
             <>

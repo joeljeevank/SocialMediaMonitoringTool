@@ -118,10 +118,14 @@ export default function ProfileDashboard() {
                   ? [...acc.analytics].sort((a, b) => new Date(a.lastCollectionTime || a.date).getTime() - new Date(b.lastCollectionTime || b.date).getTime())
                   : [];
                 const latestAnalytics = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+                const isSyncedToday = latestAnalytics?.lastCollectionTime ? (
+                  new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
+                ) : false;
                 const lastSync = latestAnalytics?.lastCollectionTime 
                   ? new Date(latestAnalytics.lastCollectionTime).toLocaleString('en-US', {
                       month: 'short',
                       day: 'numeric',
+                      year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
                       hour12: true
@@ -135,15 +139,28 @@ export default function ProfileDashboard() {
                       <h3 className="font-semibold text-slate-900 dark:text-white truncate px-2" title={acc.username}>{acc.username}</h3>
                       <p className="text-xs text-slate-500 dark:text-gray-400">{acc.platform}</p>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      {acc.status}
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                      <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                        {acc.status}
+                      </span>
+                      {isSyncedToday ? (
+                        <span className="inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Synchronized
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 py-1 px-2.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          Not Synced
+                        </span>
+                      )}
                     </div>
 
                     <div className="w-full pt-2.5 border-t border-slate-200 dark:border-white/10 flex flex-col items-center gap-1.5 text-[11px]">
                       <div className="flex items-center gap-1 text-slate-500 dark:text-gray-400">
                         <Clock className="w-3 h-3 text-purple-500" />
-                        <span>Last collected:</span>
+                        <span>Last Synchronized:</span>
                         <span className="font-semibold text-slate-700 dark:text-gray-300">{lastSync || 'Never'}</span>
                       </div>
                       <Link 

@@ -150,6 +150,7 @@ export default function AnalyticsPage() {
   const [scrapedData, setScrapedData] = useState<any>(null);
   const [collectionSuccessMsg, setCollectionSuccessMsg] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [sessionSynced, setSessionSynced] = useState(false);
 
   // Load cached scraped data on mount
   useEffect(() => {
@@ -221,16 +222,34 @@ export default function AnalyticsPage() {
     latest?.lastCollectionTime ||
     null;
 
+  const isCollectedToday = (isoString?: string | null) => {
+    if (!isoString) return false;
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return false;
+      const now = new Date();
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  // Profile data is synchronized only if collected today or during the current session
+  const isSynchronized = sessionSynced || isCollectedToday(effectiveLastCollectionTime);
+
   const formatDateTime = (isoString?: string | null) => {
     if (!isoString) return null;
     try {
       const d = new Date(isoString);
       if (isNaN(d.getTime())) return null;
       return d.toLocaleString('en-US', {
-        weekday: 'short',
-        year: 'numeric',
         month: 'short',
         day: 'numeric',
+        year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -259,8 +278,6 @@ export default function AnalyticsPage() {
     }
   };
 
-
-
   const handleCollectLinkedInData = async () => {
     setCollecting(true);
     setCollectionSuccessMsg(null);
@@ -268,6 +285,7 @@ export default function AnalyticsPage() {
       const res = await axios.post(`http://localhost:3001/api/linkedin/collect?accountId=${id}`);
       const result = res.data;
       if (result.status === 'success' || result.success) {
+        setSessionSynced(true);
         setScrapedData(result.data);
         if (typeof window !== 'undefined') {
           localStorage.setItem(`scraped_data_${id}`, JSON.stringify(result.data));
@@ -276,7 +294,7 @@ export default function AnalyticsPage() {
         const aRes = await axios.get(`http://localhost:3001/analytics/${id}`);
         setData(aRes.data);
         
-        setCollectionSuccessMsg('Data successfully collected from LinkedIn!');
+        setCollectionSuccessMsg('Data successfully collected and synchronized from LinkedIn!');
         setTimeout(() => setCollectionSuccessMsg(null), 9000);
       } else {
         alert('Error collecting data: ' + result.message);
@@ -313,7 +331,7 @@ export default function AnalyticsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-purple-500/20 shadow-sm">
             <div className="relative flex h-2.5 w-2.5 shrink-0">
-              {effectiveLastCollectionTime ? (
+              {isSynchronized ? (
                 <>
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
@@ -323,13 +341,20 @@ export default function AnalyticsPage() {
               )}
             </div>
             <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
-            <div className="text-xs">
-              <span className="text-slate-500 dark:text-gray-400 mr-1.5 font-medium">Last Collected:</span>
+            <div className="text-xs flex items-center flex-wrap gap-1.5">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                isSynchronized 
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+              }`}>
+                {isSynchronized ? 'Synchronized' : 'Not Synced'}
+              </span>
+              <span className="text-slate-500 dark:text-gray-400 font-medium">Last Synchronized:</span>
               <span className="font-semibold text-slate-900 dark:text-white">
-                {formatDateTime(effectiveLastCollectionTime) || 'Not collected yet'}
+                {formatDateTime(effectiveLastCollectionTime) || 'Never'}
               </span>
               {effectiveLastCollectionTime && (
-                <span className="ml-1.5 text-purple-600 dark:text-purple-400 font-medium">
+                <span className="text-purple-600 dark:text-purple-400 font-medium">
                   ({getRelativeTime(effectiveLastCollectionTime)})
                 </span>
               )}
@@ -371,29 +396,48 @@ export default function AnalyticsPage() {
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">
                     LinkedIn Data Collection
                   </h3>
-                  {effectiveLastCollectionTime ? (
-                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  {isSynchronized ? (
+                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                       Synchronized
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                      Pending Initial Collection
+                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      Not Synced
                     </span>
                   )}
                 </div>
 
                 <p className="text-xs text-slate-500 dark:text-gray-400 mt-1.5">
-                  {effectiveLastCollectionTime 
+                  {isSynchronized 
                     ? 'Profile metrics and activity data are synchronized with LinkedIn.' 
-                    : 'Click "Collect LinkedIn Data" to scrape live metrics.'}
+                    : 'Data is currently not synced. Click "Collect LinkedIn Data" above to fetch the latest metrics from LinkedIn.'}
                 </p>
+
+                <div className="flex items-center gap-2 mt-2 text-xs">
+                  <span className="text-slate-500 dark:text-gray-400 font-medium">Last Synchronized:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {formatDateTime(effectiveLastCollectionTime) || 'Never (Not yet synchronized)'}
+                  </span>
+                  {effectiveLastCollectionTime && (
+                    <span className="text-purple-600 dark:text-purple-400 font-medium">
+                      • {getRelativeTime(effectiveLastCollectionTime)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Quick Metadata Stats with Curved 2xl Boxes */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-white/10 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-white/10 text-xs">
+              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
+                <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Sync Status</span>
+                <span className={`font-semibold flex items-center gap-1.5 ${isSynchronized ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  <span className={`w-2 h-2 rounded-full ${isSynchronized ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                  {isSynchronized ? 'Synchronized' : 'Not Synced'}
+                </span>
+              </div>
               <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
                 <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Data Source</span>
                 <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1">
@@ -407,7 +451,7 @@ export default function AnalyticsPage() {
                   {scrapedData?.posts?.length ?? latest?.recentPosts ?? 0} posts
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5 col-span-2 sm:col-span-1">
+              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
                 <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Scraper Engine</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">Playwright Active</span>
               </div>

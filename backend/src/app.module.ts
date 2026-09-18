@@ -11,6 +11,11 @@ import { Post } from './post.entity';
 import { User } from './user.entity';
 import { CollectorController } from './collector.controller';
 import { CollectorService } from './collector.service';
+import { YouTubeChannel } from './youtube/youtube-channel.entity';
+import { YouTubeVideo } from './youtube/youtube-video.entity';
+import { YouTubeAnalytics } from './youtube/youtube-analytics.entity';
+import { YoutubeController } from './youtube/youtube.controller';
+import { YoutubeService } from './youtube/youtube.service';
 
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -24,12 +29,12 @@ dotenv.config();
       username: 'postgres',
       password: process.env.DB_PASSWORD || 'post123',
       database: 'postgres',
-      entities: [Account, Analytics, Organization, Post, User],
+      entities: [Account, Analytics, Organization, Post, User, YouTubeChannel, YouTubeVideo, YouTubeAnalytics],
       synchronize: true, // Auto create schema
     }),
-    TypeOrmModule.forFeature([Account, Analytics, Organization, Post, User]),
+    TypeOrmModule.forFeature([Account, Analytics, Organization, Post, User, YouTubeChannel, YouTubeVideo, YouTubeAnalytics]),
   ],
-  controllers: [AppController, LinkedinController, CollectorController],
-  providers: [AppService, LinkedinService, CollectorService],
+  controllers: [AppController, LinkedinController, CollectorController, YoutubeController],
+  providers: [AppService, LinkedinService, CollectorService, YoutubeService],
 })
 export class AppModule {}

@@ -189,7 +189,7 @@ export default function DashboardOverview() {
                 <TableHead className="text-purple-700 dark:text-purple-300 font-medium">Likes</TableHead>
                 <TableHead className="text-purple-700 dark:text-purple-300 font-medium">Comments</TableHead>
                 <TableHead className="text-purple-700 dark:text-purple-300 font-medium">Recent Posts</TableHead>
-                <TableHead className="text-purple-700 dark:text-purple-300 font-medium">Last Updated</TableHead>
+                <TableHead className="text-purple-700 dark:text-purple-300 font-medium">Last Synchronized</TableHead>
                 <TableHead className="text-right text-purple-700 dark:text-purple-300 font-medium">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -217,10 +217,23 @@ export default function DashboardOverview() {
                           <span>{acc.username}</span>
                         </div>
                         <span className="text-slate-500 dark:text-gray-400 text-xs">{acc.platform} Connected</span>
-                        <span className="inline-flex items-center gap-1 mt-1 py-0.5 px-2 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-max">
-                          <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
-                          {acc.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                            <span className="w-1 h-1 rounded-full bg-purple-400"></span>
+                            {acc.status}
+                          </span>
+                          {latestAnalytics?.lastCollectionTime && (new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()) ? (
+                            <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                              <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+                              Synchronized
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                              Not Synced
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300 font-semibold">{latestAnalytics ? (latestAnalytics.followers ?? 0).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.views ?? 0).toLocaleString() : '-'}</TableCell>
@@ -228,15 +241,38 @@ export default function DashboardOverview() {
                       <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.comments ?? 0).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.recentPosts ?? 0).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300 text-xs">
-                        {latestAnalytics?.lastCollectionTime 
-                          ? new Date(latestAnalytics.lastCollectionTime).toLocaleString('en-US', { 
-                              year: 'numeric', 
-                              month: 'short', 
-                              day: 'numeric', 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            }) 
-                          : (latestAnalytics?.date ? new Date(latestAnalytics.date).toLocaleDateString() : '-')}
+                        {latestAnalytics?.lastCollectionTime ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                              {new Date(latestAnalytics.lastCollectionTime).toLocaleString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+                              new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-amber-600 dark:text-amber-400'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
+                                  ? 'bg-emerald-500 animate-pulse'
+                                  : 'bg-amber-500'
+                              }`}></span>
+                              {new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
+                                ? 'Synchronized'
+                                : 'Out of sync'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-slate-400 dark:text-gray-500 text-[11px] italic">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                            Not Synced Yet
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
