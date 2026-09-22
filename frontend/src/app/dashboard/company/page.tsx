@@ -7,9 +7,7 @@ import { RefreshCw, Users, Eye, Activity, MessageCircle, ThumbsUp, AlertTriangle
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 export default function CompanyDashboard() {
-  const [accountId, setAccountId] = useState<number>(1);
-  const [orgUrn, setOrgUrn] = useState<string>('');
-  
+  const accountId = 1;
   const [me, setMe] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
   const [followers, setFollowers] = useState<any>(null);
@@ -49,7 +47,6 @@ export default function CompanyDashboard() {
       const orgsList = orgsData.organizations || [];
       if (orgsList.length > 0) {
         const selectedOrg = orgsList[0];
-        setOrgUrn(selectedOrg);
         
         const compRes = await fetch(`http://localhost:3001/api/linkedin/company/${encodeURIComponent(selectedOrg)}?accountId=${accountId}`);
         const compData = await compRes.json();

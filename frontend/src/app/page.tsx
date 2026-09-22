@@ -15,18 +15,12 @@ import {
   ShieldCheck, 
   Zap, 
   Sparkles, 
-  Key, 
-  LogIn, 
   Cpu, 
-  Radar, 
-  RefreshCw,
-  Info,
-  Server,
-  Radio,
-  Globe,
-  AlertCircle,
-  Loader2,
-  ArrowRight
+  Radio, 
+  Globe, 
+  AlertCircle, 
+  Loader2, 
+  ArrowRight 
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 

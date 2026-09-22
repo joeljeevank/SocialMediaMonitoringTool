@@ -109,7 +109,9 @@ function getRealtimePostDate(postUrl?: string | null, rawPostDate?: string | nul
           const diffYears = Math.floor(diffDays / 365);
           return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
         }
-      } catch (e) {}
+      } catch {
+        // Fall through on parsing failure
+      }
     }
   }
 
@@ -135,7 +137,9 @@ function getExactPostDateTooltip(postUrl?: string | null, rawPostDate?: string |
             minute: '2-digit',
           });
         }
-      } catch (e) {}
+      } catch {
+        // Fall through on parsing failure
+      }
     }
   }
   return rawPostDate || '';
