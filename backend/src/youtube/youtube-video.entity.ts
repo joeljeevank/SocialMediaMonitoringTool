@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { YouTubeChannel } from './youtube-channel.entity';
 
 @Entity('youtube_videos')
@@ -33,7 +33,11 @@ export class YouTubeVideo {
   @Column({ type: 'int', default: 0 })
   comments: number;
 
+  @Column({ nullable: true })
+  channelId: number;
+
   @ManyToOne(() => YouTubeChannel, (channel) => channel.videos, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'channelId' })
   channel: YouTubeChannel;
 
   @CreateDateColumn()

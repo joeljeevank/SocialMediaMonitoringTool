@@ -19,6 +19,109 @@ export class CollectorService {
     @InjectRepository(Account) private accountRepo: Repository<Account>,
   ) {}
 
+  private async extractFollowers(page: Page, contextLabel: string = 'Page'): Promise<number | null> {
+    try {
+      console.log(`[Followers] Scanning ${contextLabel} for follower/connection metrics...`);
+
+      // 1. Direct in-browser DOM scan of leaf text elements (immune to CSS class changes)
+      const evaluated = await page.evaluate(() => {
+        const parseCount = (rawText: string): number | null => {
+          if (!rawText || rawText.length > 80) return null;
+          // Matches patterns like "34 connections", "1,250 followers", "500+ connections", "12.4k followers"
+          const match = rawText.match(/([\d,\.]+)\s*([kKmM]?)\+?\s*(?:follower|connection)/i);
+          if (match) {
+            let num = parseFloat(match[1].replace(/,/g, ''));
+            const suffix = (match[2] || '').toLowerCase();
+            if (suffix === 'k') num *= 1000;
+            if (suffix === 'm') num *= 1000000;
+            const res = Math.floor(num);
+            return res > 0 ? res : null;
+          }
+          return null;
+        };
+
+        // First check high-priority selectors (links and top-card elements)
+        const prioritySelectors = [
+          'a[href*="/followers/"]',
+          'a[href*="/connections"]',
+          'a[href*="/details/connections"]',
+          'a[href*="/recent-activity"]',
+          'a[href*="/network"]',
+          '.feed-shared-creator-v2__follower-count',
+          '.org-top-card-summary-info-list__info-item',
+          '.org-top-card-summary__follower-count',
+          'ul.pv-top-card--list li',
+          '.pv-top-card--list-bullet li',
+          'li.text-body-small',
+          'span.text-body-small',
+          'p.text-body-small',
+          'div.ph5',
+        ];
+
+        for (const sel of prioritySelectors) {
+          const els = document.querySelectorAll(sel);
+          for (const el of Array.from(els)) {
+            const count = parseCount((el.textContent || '').trim());
+            if (count !== null) return count;
+          }
+        }
+
+        // Broad scan of all leaf elements
+        const allLeafs = document.querySelectorAll('a, span, p, li, h3, div');
+        for (const el of Array.from(allLeafs)) {
+          if (el.children.length > 2) continue; // Keep near leaf nodes
+          const text = (el.textContent || '').trim();
+          if (text.toLowerCase().includes('follower') || text.toLowerCase().includes('connection')) {
+            const count = parseCount(text);
+            if (count !== null) return count;
+          }
+        }
+
+        return null;
+      }).catch(() => null);
+
+      if (evaluated !== null && evaluated > 0) {
+        console.log(`[Followers] Successfully detected ${evaluated} followers/connections from ${contextLabel} DOM!`);
+        return evaluated;
+      }
+
+      // 2. Playwright text locators fallback
+      const textLocators = [
+        'a[href*="/followers/"]',
+        'a[href*="/connections"]',
+        '*:has-text("followers")',
+        '*:has-text("connections")',
+        '*:has-text("follower")',
+        '*:has-text("connection")',
+      ];
+
+      for (const sel of textLocators) {
+        const elements = await page.locator(sel).all().catch(() => []);
+        for (const el of elements.slice(0, 15)) {
+          const text = await el.innerText().catch(() => '');
+          if (!text || text.length > 80) continue;
+          const match = text.match(/([\d,\.]+)\s*([kKmM]?)\+?\s*(?:follower|connection)/i);
+          if (match) {
+            let num = parseFloat(match[1].replace(/,/g, ''));
+            const suffix = (match[2] || '').toLowerCase();
+            if (suffix === 'k') num *= 1000;
+            if (suffix === 'm') num *= 1000000;
+            const res = Math.floor(num);
+            if (res > 0) {
+              console.log(`[Followers] Playwright locator "${sel}" matched "${text}" -> ${res}`);
+              return res;
+            }
+          }
+        }
+      }
+
+      return null;
+    } catch (err: any) {
+      console.warn(`[Followers] Extraction warning: ${err.message}`);
+      return null;
+    }
+  }
+
   async collectData(accountId: number) {
     const account = await this.accountRepo.findOne({ 
       where: { id: accountId },
@@ -130,51 +233,9 @@ export class CollectorService {
       // Step 3: Extract Data
       console.log('=== ANALYTICS DATA EXTRACTION ===');
       currentStep = 'Extract Followers';
-      let followers: number | null = null;
-      let followerText = '';
-      let followerElementDetected = 'NO';
-      
-      try {
-         const followerLocators = [
-           'a[href*="/followers/"]',
-           'ul.pv-top-card--list li',
-           '.pv-top-card--list-bullet li',
-           'span.text-body-small.t-black--light',
-           '.org-top-card-summary-info-list__info-item',
-           '.t-normal.t-black--light',
-           'div.t-14.t-black--light',
-           '.org-top-card-summary__follower-count',
-           '*:has-text("followers")'
-         ];
-         
-         let debugTexts = [];
-         for (const sel of followerLocators) {
-            const elements = await page.locator(sel).all();
-            for (const el of elements) {
-               const text = await el.innerText().catch(()=>'');
-               const lowerText = text.toLowerCase();
-               if (lowerText.includes('follower') || lowerText.includes('connection')) {
-                  debugTexts.push(text);
-                  followerText = text;
-                  const match = text.match(/([\d,\.]+)([kKmM]?)\+?\s*(follower|connection)/i);
-                  if (match) {
-                     let num = parseFloat(match[1].replace(/,/g, ''));
-                     const suffix = match[2].toLowerCase();
-                     if (suffix === 'k') num *= 1000;
-                     if (suffix === 'm') num *= 1000000;
-                     followers = Math.floor(num);
-                     followerElementDetected = 'YES';
-                     break;
-                  }
-               }
-            }
-            if (followers !== null) break;
-         }
-         const fs = require('fs');
-         fs.writeFileSync('follower_debug.txt', debugTexts.join('\n---\n'));
-      } catch (e: any) {
-         console.error('Error during follower extraction:', e.message);
-      }
+      await page.waitForTimeout(3000); // Allow dynamic header/top card to hydrate
+      let followers: number | null = await this.extractFollowers(page, 'Profile Page');
+      let followerElementDetected = followers !== null ? 'YES' : 'NO';
       
       let postsScraped = [];
       let postElementsDetected = 0;
@@ -209,56 +270,106 @@ export class CollectorService {
          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
          await page.waitForTimeout(4000); // Give SPA a moment to fully render
          
-         const preExtractUrl = page.url();
-         const preExtractTitle = await page.title();
-         console.log(`Current URL before extraction: ${preExtractUrl}`);
-         console.log(`Page title before extraction: ${preExtractTitle}`);
-         
-         currentStep = 'Extract Posts';
-         
-         // Controlled scroll to trigger lazy loading
-         for(let i=0; i<4; i++) {
-            try {
-               await page.evaluate(() => window.scrollBy(0, 800));
-            } catch (err) {
-               console.log('Scroll failed (possibly due to background navigation), ignoring...');
+          const preExtractUrl = page.url();
+          const preExtractTitle = await page.title();
+          console.log(`Current URL before extraction: ${preExtractUrl}`);
+          console.log(`Page title before extraction: ${preExtractTitle}`);
+
+          // If followers were not detected on profile page, extract from Activity feed page header
+          if (followers === null || followers === 0) {
+            console.log('Followers not found on profile; attempting extraction from Activity feed page...');
+            const actFollowers = await this.extractFollowers(page, 'Activity Feed Page');
+            if (actFollowers && actFollowers > 0) {
+              followers = actFollowers;
+              followerElementDetected = 'YES';
+              console.log(`Followers recovered from Activity page: ${followers}`);
             }
-            await page.waitForTimeout(2500);
-         }
+          }
+          
+          currentStep = 'Extract Posts';
          
-         const postSelectors = [
-           'div[data-urn^="urn:li:activity:"]',
-           '.feed-shared-update-v2',
-           '.occludable-update',
-           '.update-components-update-v2',
-           'div.feed-shared-update-v2',
-           'div.share-update-card'
-         ];
-         
-         let postElements: any[] = [];
-         let usedSelector = '';
-         for (const sel of postSelectors) {
-             const elements = await page.locator(sel).all();
-             if (elements.length > 0) {
-                 postElements = elements;
-                 usedSelector = sel;
-                 break;
+          console.log('=== DEEP FEED SCROLLING: LOADING ALL AVAILABLE POSTS ===');
+          let prevPostCount = 0;
+          let unchangedCycles = 0;
+          const maxScrollCycles = 25; // Adaptive scroll cycles to load all available posts
+          const combinedPostSelector = 'div[data-urn^="urn:li:activity:"], .feed-shared-update-v2, .occludable-update, .update-components-update-v2, div.share-update-card';
+
+          for (let cycle = 0; cycle < maxScrollCycles; cycle++) {
+             try {
+                // 1. Check for and click "Show more results" / "Show more activity" / "Load more" button
+                const showMoreLoc = page.locator('button.feed-shared-show-more-button, button:has-text("Show more results"), button:has-text("Show more activity"), button:has-text("Load more"), button:has-text("Show more")');
+                if (await showMoreLoc.count().catch(() => 0) > 0) {
+                   const firstBtn = showMoreLoc.first();
+                   if (await firstBtn.isVisible().catch(() => false)) {
+                      console.log('Clicking "Show more" button to reveal older posts...');
+                      await firstBtn.click({ timeout: 2000 }).catch(() => {});
+                      await page.waitForTimeout(2000);
+                   }
+                }
+
+                // 2. Scroll down to trigger LinkedIn dynamic lazy loading
+                await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+                await page.waitForTimeout(2000);
+
+                // 3. Count detected post elements
+                const currentPostCount = await page.locator(combinedPostSelector).count().catch(() => 0);
+                console.log(`Scroll cycle ${cycle + 1}/${maxScrollCycles} - detected posts in DOM: ${currentPostCount}`);
+
+                if (currentPostCount > prevPostCount) {
+                   prevPostCount = currentPostCount;
+                   unchangedCycles = 0;
+                } else {
+                   unchangedCycles++;
+                   if (unchangedCycles === 1) {
+                      await page.evaluate(() => window.scrollBy(0, -300));
+                      await page.waitForTimeout(1000);
+                      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+                      await page.waitForTimeout(2000);
+                   } else if (unchangedCycles >= 3) {
+                      console.log(`Feed reached the end or no new posts loaded after ${unchangedCycles} attempts. Ending scroll.`);
+                      break;
+                   }
+                }
+             } catch (err: any) {
+                console.log(`Scroll cycle ${cycle + 1} encountered: ${err.message}`);
+                break;
              }
-         }
-         
-         postElementsDetected = postElements.length;
-         console.log('\n=== POST EXTRACTION DEBUG ===');
-         console.log(`Posts found: ${postElementsDetected}`);
-         
-         if (postElementsDetected === 0) {
-             console.log('=== NO POSTS FOUND ===');
-             console.log('The LinkedIn page loaded successfully, but no post elements were found (possibly user has no posts). Continuing with 0 posts.');
-         } else {
-         
-         const seenPostsMap = new Map();
-         let scrapedCount = 0;
-         
-         for (let i = 0; i < postElements.length && scrapedCount < 5; i++) {
+          }
+          
+          const postSelectors = [
+            'div[data-urn^="urn:li:activity:"]',
+            '.feed-shared-update-v2',
+            '.occludable-update',
+            '.update-components-update-v2',
+            'div.feed-shared-update-v2',
+            'div.share-update-card'
+          ];
+          
+          let postElements: any[] = [];
+          let usedSelector = '';
+          for (const sel of postSelectors) {
+              const elements = await page.locator(sel).all();
+              if (elements.length > 0) {
+                  postElements = elements;
+                  usedSelector = sel;
+                  break;
+              }
+          }
+          
+          postElementsDetected = postElements.length;
+          console.log('\n=== POST EXTRACTION DEBUG ===');
+          console.log(`Total posts found for extraction: ${postElementsDetected}`);
+          
+          if (postElementsDetected === 0) {
+              console.log('=== NO POSTS FOUND ===');
+              console.log('The LinkedIn page loaded successfully, but no post elements were found. Continuing with 0 posts.');
+          } else {
+          
+          const seenPostsMap = new Map();
+          let scrapedCount = 0;
+          const maxPostsToExtract = 150; // High ceiling to extract all available posts
+          
+          for (let i = 0; i < postElements.length && scrapedCount < maxPostsToExtract; i++) {
             const el = postElements[i];
             
             let urn = await el.getAttribute('data-urn').catch(()=>null);
@@ -629,7 +740,17 @@ export class CollectorService {
                    existing.views = impressions;
                  }
               } else {
+                 let postId = urn;
+                 if (!postId && postUrl) {
+                   const actMatch = postUrl.match(/(?:activity|share|update)[:/]+(\d{17,20})/);
+                   if (actMatch) postId = `urn:li:activity:${actMatch[1]}`;
+                 }
+                 if (!postId) {
+                   postId = `urn:li:post:${Buffer.from(normalize(author) + normalize(postDate) + normalize(cleanContent.slice(0, 40))).toString('hex').slice(0, 32)}`;
+                 }
+
                  const newPost = {
+                   id: postId,
                    author: normalize(author),
                    content: normalize(cleanContent),
                    postUrl,
@@ -668,7 +789,31 @@ export class CollectorService {
       const newLikes = postsScraped.reduce((sum, p) => sum + (p.likes || 0), 0);
       const newComments = postsScraped.reduce((sum, p) => sum + (p.comments || 0), 0);
       const newViews = postsScraped.reduce((sum, p) => sum + (p.impressions || p.views || 0), 0);
-      const newFollowers = followers !== null ? followers : 0;
+      // Safety preservation: Do not overwrite an existing positive follower count with 0
+      let newFollowers = followers;
+      if (newFollowers === null || newFollowers === undefined || newFollowers === 0) {
+        const prevAnalytics = await this.analyticsRepo.findOne({
+          where: { account: { id: account.id } },
+          order: { id: 'DESC' },
+        });
+        if (prevAnalytics && prevAnalytics.followers > 0) {
+          newFollowers = prevAnalytics.followers;
+          console.log(`Preserved existing follower count (${newFollowers}) for account ${account.id}`);
+        } else {
+          const sameUserRecord = await this.analyticsRepo
+            .createQueryBuilder('a')
+            .innerJoin('a.account', 'acc')
+            .where('acc.username = :uname AND a.followers > 0', { uname: account.username })
+            .orderBy('a.id', 'DESC')
+            .getOne();
+          if (sameUserRecord && sameUserRecord.followers > 0) {
+            newFollowers = sameUserRecord.followers;
+            console.log(`Preserved follower count (${newFollowers}) from historical records for @${account.username}`);
+          } else {
+            newFollowers = 0;
+          }
+        }
+      }
       const newRecentPosts = postsScraped.length;
 
       const finalCollectionTime = timestamp;
@@ -687,6 +832,43 @@ export class CollectorService {
         lastCollectionTime: finalCollectionTime
       });
       await this.analyticsRepo.save(newAnalytics);
+
+      // Save / Upsert All Scraped Posts into PostgreSQL
+      for (const p of postsScraped) {
+        try {
+          let postRecord = await this.postRepo.findOne({ where: { id: p.id } });
+          if (postRecord) {
+            postRecord.content = p.content;
+            postRecord.author = p.author;
+            postRecord.postDate = p.postDate;
+            postRecord.postUrl = p.postUrl;
+            postRecord.impressions = p.impressions;
+            postRecord.likes = p.likes ?? postRecord.likes;
+            postRecord.comments = p.comments ?? postRecord.comments;
+            postRecord.account = account;
+            postRecord.accountId = account.id;
+            await this.postRepo.save(postRecord);
+          } else {
+            postRecord = this.postRepo.create({
+              id: p.id,
+              content: p.content,
+              author: p.author,
+              postDate: p.postDate,
+              postUrl: p.postUrl,
+              createdAt: p.date,
+              impressions: p.impressions,
+              likes: p.likes ?? 0,
+              comments: p.comments ?? 0,
+              dataSource: 'Scraper',
+              account: account,
+              accountId: account.id,
+            });
+            await this.postRepo.save(postRecord);
+          }
+        } catch (postErr: any) {
+          console.warn(`Could not persist post ${p.id}: ${postErr.message}`);
+        }
+      }
 
       console.log('=== LINKEDIN COLLECTION SUCCESS ===');
       return { 
@@ -714,6 +896,41 @@ export class CollectorService {
       }
       throw new InternalServerErrorException(err.message);
     }
+  }
+
+  async getPosts(accountId: number, options: {
+    search?: string;
+    sort?: string;
+    order?: 'ASC' | 'DESC';
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: any[]; total: number; page: number; totalPages: number }> {
+    const { search, sort = 'createdAt', order = 'DESC', page = 1, limit = 10 } = options;
+
+    const query = this.postRepo.createQueryBuilder('post')
+      .where('post.accountId = :accountId', { accountId });
+
+    if (search && search.trim()) {
+      query.andWhere('(post.content ILIKE :search OR post.author ILIKE :search)', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    const sortColumn = ['impressions', 'likes', 'comments', 'createdAt'].includes(sort)
+      ? `post.${sort}`
+      : 'post.createdAt';
+
+    query.orderBy(sortColumn, order);
+    query.skip((page - 1) * limit).take(limit);
+
+    const [items, total] = await query.getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
   }
 }
 

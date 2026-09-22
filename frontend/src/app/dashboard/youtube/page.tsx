@@ -8,12 +8,12 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 import { 
+  Download,
   Users, 
-  Eye, 
+  Eye,
   Video, 
   Clock, 
   ThumbsUp, 
-  MessageSquare, 
   TrendingUp, 
   TrendingDown, 
   RefreshCw, 
@@ -35,7 +35,9 @@ import {
   Copy,
   Check,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert,
+  Lock
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -66,6 +68,8 @@ type Channel = {
   status: string;
   lastSyncedAt?: string;
   googleAccountEmail?: string;
+  isOAuth?: boolean;
+  authType?: 'oauth' | 'identifier';
 };
 
 type VideoItem = {
@@ -85,6 +89,54 @@ type VideoItem = {
     thumbnailUrl?: string;
     customUrl?: string;
   };
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = label === todayStr;
+    const dateFormatted = new Date(label + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    return (
+      <div className="bg-slate-950/95 dark:bg-[#090d16]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl min-w-[210px] text-xs space-y-2">
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+          <span className="font-bold text-white">{dateFormatted}</span>
+          {isToday && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Telemetry
+            </span>
+          )}
+        </div>
+        <div className="space-y-1.5 pt-0.5">
+          {payload.map((entry: any, index: number) => {
+            const isGained = entry.dataKey === 'subscribersGained' || entry.name?.toLowerCase().includes('gain');
+            const isLost = entry.dataKey === 'subscribersLost' || entry.name?.toLowerCase().includes('lost');
+            const valNum = Number(entry.value || 0);
+
+            return (
+              <div key={index} className="flex items-center justify-between gap-3 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                  <span className="text-gray-300 font-medium">{entry.name}:</span>
+                </div>
+                <span className={`font-bold ${isGained && valNum > 0 ? 'text-emerald-400' : isLost && valNum > 0 ? 'text-rose-400' : 'text-white'}`}>
+                  {isGained && valNum > 0 ? `+${valNum.toLocaleString()}` : ''}
+                  {isLost && valNum > 0 ? `-${valNum.toLocaleString()}` : ''}
+                  {!isGained && !isLost ? valNum.toLocaleString() : (valNum === 0 ? '0' : '')}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  return null;
 };
 
 export default function YouTubeDashboardPage() {
@@ -107,6 +159,8 @@ export default function YouTubeDashboardPage() {
   const [videoSort, setVideoSort] = useState<string>('publishedAt');
   const [videoOrder, setVideoOrder] = useState<'ASC' | 'DESC'>('DESC');
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+  const [lastLiveUpdated, setLastLiveUpdated] = useState<string>('');
+  const [isLiveRefreshing, setIsLiveRefreshing] = useState<boolean>(false);
 
   // Config & Modals
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -242,6 +296,52 @@ export default function YouTubeDashboardPage() {
     loadAll();
   }, [fetchConfig, checkOAuthStatus, fetchChannels, fetchOverview, fetchTimeseries, fetchVideos]);
 
+  // Silent Live Refresh Callback
+  const refreshLiveData = useCallback(async () => {
+    setIsLiveRefreshing(true);
+    try {
+      await Promise.all([
+        fetchOverview(),
+        fetchTimeseries(),
+        fetchChannels(),
+      ]);
+      setLastLiveUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (e) {
+      console.error('Live telemetry refresh failed', e);
+    } finally {
+      setIsLiveRefreshing(false);
+    }
+  }, [fetchOverview, fetchTimeseries, fetchChannels]);
+
+  // Real-Time Polling & Tab Visibility Listener
+  useEffect(() => {
+    setLastLiveUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+    // Poll every 25 seconds for live telemetry
+    const interval = setInterval(() => {
+      refreshLiveData();
+    }, 25000);
+
+    // Refresh immediately when user returns to tab / window gains focus
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshLiveData();
+      }
+    };
+    const handleFocus = () => {
+      refreshLiveData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshLiveData]);
+
   // Sync Action
   const handleSync = async () => {
     setSyncing(true);
@@ -329,6 +429,20 @@ export default function YouTubeDashboardPage() {
   };
 
   const activeChannel = channels.find((c) => String(c.id) === String(selectedChannelId));
+  const isChannelOAuth = (ch?: Channel | null): boolean => {
+    if (!ch) return false;
+    return Boolean(
+      ch.isOAuth === true ||
+      ch.authType === 'oauth' ||
+      (ch.googleAccountEmail && ch.googleAccountEmail.trim().length > 0)
+    );
+  };
+  const hasAnalyticsAccess = activeChannel
+    ? isChannelOAuth(activeChannel)
+    : (overview?.hasAnalyticsAccess ?? channels.some(isChannelOAuth));
+  const isIdentifierChannel = activeChannel
+    ? !isChannelOAuth(activeChannel)
+    : (channels.length > 0 && channels.every((c) => !isChannelOAuth(c)));
 
   return (
     <div className="space-y-6">
@@ -361,6 +475,40 @@ export default function YouTubeDashboardPage() {
         </div>
       )}
 
+      {/* Public Identifier Information Banner - ONLY shown for Public Identifier channels */}
+      {isIdentifierChannel && activeChannel && !isChannelOAuth(activeChannel) && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 text-amber-900 dark:text-amber-200 shadow-sm backdrop-blur-md">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 border border-amber-500/30 shadow-inner">
+              <Key className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Channel "{activeChannel.title}" Connected via Public Identifier
+                </h3>
+                <span className="py-0.5 px-2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  Public Metadata Only
+                </span>
+                <span className="py-0.5 px-2 rounded-full text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+                  Cannot Access YouTube Studio
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-amber-200/80 mt-1 leading-relaxed max-w-3xl">
+                This channel is tracked using its public YouTube handle/ID. YouTube does not allow access to private YouTube Studio analytics such as <strong>Watch Time</strong>, <strong>Audience Retention</strong>, <strong>Video Shares</strong>, and <strong>Subscriber Churn</strong> without Google OAuth authorization. Public metrics (Total Subscribers, Lifetime Views, Video Catalog, Likes, and Comments) are fully active.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => handleConnectClick('oauth')}
+            className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold text-xs px-4 py-2 shrink-0 shadow-md shadow-red-600/20 gap-1.5 cursor-pointer"
+          >
+            <YoutubeIcon className="w-3.5 h-3.5" />
+            Connect via Google OAuth
+          </Button>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
@@ -368,7 +516,7 @@ export default function YouTubeDashboardPage() {
             <YoutubeIcon className="w-8 h-8" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                 YouTube Dashboard
               </h1>
@@ -376,9 +524,19 @@ export default function YouTubeDashboardPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                 Official API v3
               </span>
+              <span
+                className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm"
+                title="Live real-time subscriber and analytics telemetry"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Real-Time Live Active
+              </span>
               {config?.apiKeyConfigured && (
                 <span
-                  className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
                   title="YouTube Data API integration active"
                 >
                   <Key className="w-3 h-3" />
@@ -386,8 +544,13 @@ export default function YouTubeDashboardPage() {
                 </span>
               )}
             </div>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">
-              Live multi-channel performance, audience metrics, and video analytics
+            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1 flex flex-wrap items-center gap-2">
+              <span>Live multi-channel performance, audience metrics, and video analytics</span>
+              {lastLiveUpdated && (
+                <span className="text-[11px] text-emerald-500 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  ⚡ Live updated {lastLiveUpdated}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -413,7 +576,7 @@ export default function YouTubeDashboardPage() {
               </option>
               {channels.map((ch) => (
                 <option key={ch.id} value={ch.id} className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
-                  ▶ {ch.title} {ch.customUrl ? `(${ch.customUrl})` : ''}
+                  ▶ {ch.title} {ch.isOAuth ? '🔒 [Studio]' : '👁 [Public]'}
                 </option>
               ))}
               <option value="__add__" className="bg-white dark:bg-[#090d16] text-red-500 font-bold py-1">
@@ -445,8 +608,18 @@ export default function YouTubeDashboardPage() {
             variant="outline"
             className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-cyan-500/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-red-500' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Now'}
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing || isLiveRefreshing ? 'animate-spin text-red-500' : ''}`} />
+            {syncing ? 'Syncing...' : isLiveRefreshing ? 'Updating...' : 'Sync Now'}
+          </Button>
+
+          {/* Export Report Button */}
+          <Button
+            onClick={() => router.push(`/dashboard/reports?platform=youtube&channelId=${selectedChannelId}&range=${dateRange}`)}
+            variant="outline"
+            className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-red-500/30 hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-red-500" />
+            Export Report
           </Button>
 
           {/* Connect Account Button */}
@@ -476,11 +649,22 @@ export default function YouTubeDashboardPage() {
               </div>
             )}
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">{activeChannel.title}</h2>
                 {activeChannel.customUrl && (
                   <span className="text-xs text-slate-500 dark:text-gray-400 font-medium">
                     {activeChannel.customUrl}
+                  </span>
+                )}
+                {isChannelOAuth(activeChannel) ? (
+                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    Google OAuth (Studio Verified)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <Key className="w-3.5 h-3.5 text-amber-500" />
+                    Public Identifier (Public Stats Only)
                   </span>
                 )}
                 <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -490,6 +674,11 @@ export default function YouTubeDashboardPage() {
               </div>
               <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
                 Channel ID: <code className="text-slate-700 dark:text-slate-300 font-mono text-[11px]">{activeChannel.channelId}</code>
+                {activeChannel.googleAccountEmail && (
+                  <span className="ml-2 font-medium text-emerald-600 dark:text-emerald-400">
+                    • Account: {activeChannel.googleAccountEmail}
+                  </span>
+                )}
                 {activeChannel.lastSyncedAt && (
                   <span className="ml-2 font-medium">
                     • Last Synced: {new Date(activeChannel.lastSyncedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -555,85 +744,140 @@ export default function YouTubeDashboardPage() {
         </Card>
       )}
 
-      {/* Overview Cards Grid (8 KPI cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Overview Cards Grid (8 KPI cards including all YouTube Studio metrics) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
         {[
           {
             label: 'Subscribers',
             value: (overview?.subscribers || 0).toLocaleString(),
-            sub: `${overview?.netSubscribers >= 0 ? '+' : ''}${(overview?.netSubscribers || 0).toLocaleString()} net (${dateRange})`,
+            sub: hasAnalyticsAccess && overview?.netSubscribers !== null && overview?.netSubscribers !== undefined
+              ? `${overview?.netSubscribers >= 0 ? '+' : ''}${(overview?.netSubscribers || 0).toLocaleString()} net in period`
+              : `Total public subscribers`,
             icon: Users,
             color: 'text-red-500',
             bg: 'from-red-500/20 to-pink-500/20',
+            live: true,
+            locked: false,
           },
           {
             label: 'Total Views',
-            value: (overview?.totalViews || 0).toLocaleString(),
-            sub: `${(overview?.periodViews || 0).toLocaleString()} views (${dateRange})`,
+            value: Number(overview?.totalViews || 0).toLocaleString(),
+            sub: hasAnalyticsAccess && overview?.periodViews
+              ? `${Number(overview.periodViews).toLocaleString()} in ${dateRange}`
+              : 'Cumulative channel views',
             icon: Eye,
             color: 'text-indigo-500',
             bg: 'from-indigo-500/20 to-purple-500/20',
+            live: true,
+            locked: false,
           },
           {
             label: 'Total Videos',
             value: (overview?.totalVideos || 0).toLocaleString(),
-            sub: `${videos.length} videos analyzed`,
+            sub: `${videos.length} videos cataloged`,
             icon: Video,
             color: 'text-purple-500',
             bg: 'from-purple-500/20 to-pink-500/20',
+            live: false,
+            locked: false,
           },
           {
             label: 'Watch Time (Hours)',
-            value: `${(overview?.watchTimeHours || 0).toLocaleString()} hrs`,
-            sub: `${(overview?.watchTimeMinutes || 0).toLocaleString()} minutes (${dateRange})`,
-            icon: Clock,
-            color: 'text-amber-500',
-            bg: 'from-amber-500/20 to-orange-500/20',
+            value: hasAnalyticsAccess
+              ? `${Number(overview?.watchTimeHours ?? 0).toLocaleString()} hrs`
+              : 'Cannot Access',
+            sub: hasAnalyticsAccess
+              ? `${Number(overview?.watchTimeMinutes ?? 0).toLocaleString()} mins watched (${dateRange})`
+              : 'Requires Google OAuth login',
+            icon: hasAnalyticsAccess ? Clock : Lock,
+            color: hasAnalyticsAccess ? 'text-amber-500' : 'text-amber-600 dark:text-amber-400',
+            bg: hasAnalyticsAccess ? 'from-amber-500/20 to-orange-500/20' : 'from-amber-500/10 to-orange-500/10',
+            live: false,
+            locked: !hasAnalyticsAccess,
           },
           {
-            label: 'Total Likes',
-            value: (overview?.likes || 0).toLocaleString(),
-            sub: 'Audience reactions',
-            icon: ThumbsUp,
-            color: 'text-pink-500',
-            bg: 'from-pink-500/20 to-rose-500/20',
-          },
-          {
-            label: 'Comments',
-            value: (overview?.comments || 0).toLocaleString(),
-            sub: 'Viewer discussions',
-            icon: MessageSquare,
-            color: 'text-emerald-500',
-            bg: 'from-emerald-500/20 to-teal-500/20',
+            label: 'Avg View Duration',
+            value: hasAnalyticsAccess
+              ? (overview?.averageViewDurationSeconds
+                  ? `${Math.floor(overview.averageViewDurationSeconds / 60)}m ${overview.averageViewDurationSeconds % 60}s`
+                  : '0m 0s')
+              : 'Cannot Access',
+            sub: hasAnalyticsAccess
+              ? `Studio audience retention (${dateRange})`
+              : 'Requires Google OAuth login',
+            icon: hasAnalyticsAccess ? Sparkles : Lock,
+            color: hasAnalyticsAccess ? 'text-cyan-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-cyan-500/20 to-blue-500/20' : 'from-slate-500/10 to-slate-500/10',
+            live: false,
+            locked: !hasAnalyticsAccess,
           },
           {
             label: 'Subscribers Gained',
-            value: `+${(overview?.subscribersGained || 0).toLocaleString()}`,
-            sub: `Period: ${dateRange}`,
-            icon: TrendingUp,
-            color: 'text-emerald-500',
-            bg: 'from-emerald-500/20 to-green-500/20',
+            value: hasAnalyticsAccess
+              ? `+${Number(overview?.subscribersGained ?? 0).toLocaleString()}`
+              : 'Cannot Access',
+            sub: hasAnalyticsAccess ? `Studio growth (${dateRange})` : 'Daily churn requires Google OAuth',
+            icon: hasAnalyticsAccess ? TrendingUp : Lock,
+            color: hasAnalyticsAccess ? 'text-emerald-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-emerald-500/20 to-green-500/20' : 'from-slate-500/10 to-slate-500/10',
+            live: hasAnalyticsAccess,
+            locked: !hasAnalyticsAccess,
           },
           {
             label: 'Subscribers Lost',
-            value: `-${(overview?.subscribersLost || 0).toLocaleString()}`,
-            sub: `Period: ${dateRange}`,
-            icon: TrendingDown,
-            color: 'text-rose-500',
-            bg: 'from-rose-500/20 to-red-500/20',
+            value: hasAnalyticsAccess
+              ? `-${Number(overview?.subscribersLost ?? 0).toLocaleString()}`
+              : 'Cannot Access',
+            sub: hasAnalyticsAccess ? `Unsubscribes (${dateRange})` : 'Unsubscribes require Google OAuth',
+            icon: hasAnalyticsAccess ? TrendingDown : Lock,
+            color: hasAnalyticsAccess ? 'text-rose-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-rose-500/20 to-red-500/20' : 'from-slate-500/10 to-slate-500/10',
+            live: false,
+            locked: !hasAnalyticsAccess,
+          },
+          {
+            label: 'Video Shares',
+            value: hasAnalyticsAccess
+              ? `${Number(overview?.shares ?? 0).toLocaleString()} shares`
+              : 'Cannot Access',
+            sub: hasAnalyticsAccess ? `Official Studio shares (${dateRange})` : 'Share tracking requires Google OAuth',
+            icon: hasAnalyticsAccess ? Share2 : Lock,
+            color: hasAnalyticsAccess ? 'text-pink-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-pink-500/20 to-rose-500/20' : 'from-slate-500/10 to-slate-500/10',
+            live: false,
+            locked: !hasAnalyticsAccess,
           },
         ].map((card, i) => (
           <Card
             key={i}
-            className="glass border border-purple-200 dark:border-white/5 rounded-3xl p-5 hover:shadow-lg transition-all hover:scale-[1.02]"
+            className={`glass border rounded-3xl p-5 hover:shadow-lg transition-all hover:scale-[1.02] ${
+              card.locked
+                ? 'border-amber-500/20 bg-amber-500/[0.02]'
+                : 'border-purple-200 dark:border-white/5'
+            }`}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-500 dark:text-gray-400">{card.label}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-500 dark:text-gray-400">{card.label}</span>
+                {card.live && (
+                  <span className="inline-flex items-center gap-1 py-0.5 px-1.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+                    LIVE
+                  </span>
+                )}
+                {card.locked && (
+                  <span className="inline-flex items-center gap-1 py-0.5 px-1.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <Lock className="w-2.5 h-2.5" />
+                    STUDIO ONLY
+                  </span>
+                )}
+              </div>
               <div className={`w-10 h-10 rounded-2xl bg-gradient-to-tr ${card.bg} flex items-center justify-center ${card.color} shadow-inner`}>
                 <card.icon className="w-5 h-5" />
               </div>
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <div className={`text-2xl font-extrabold tracking-tight ${card.locked ? 'text-amber-600 dark:text-amber-400 text-base flex items-center gap-1.5 py-1' : 'text-slate-900 dark:text-white'}`}>
+              {card.locked && <Lock className="w-4 h-4 text-amber-500 shrink-0" />}
               {card.value}
             </div>
             <p className="text-[11px] text-slate-500 dark:text-gray-400 font-medium mt-1">
@@ -688,20 +932,27 @@ export default function YouTubeDashboardPage() {
                       <p className="text-xs text-slate-500 dark:text-gray-400 truncate">
                         {ch.customUrl || ch.googleAccountEmail || ch.channelId}
                       </p>
+                      <div className="mt-1">
+                        {isChannelOAuth(ch) ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <ShieldCheck className="w-2.5 h-2.5" />
+                            Google OAuth
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            <Key className="w-2.5 h-2.5" />
+                            Public Identifier
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs py-2 px-3 rounded-xl bg-slate-100/70 dark:bg-black/20 border border-slate-200/50 dark:border-white/5">
+                  <div className="grid grid-cols-2 gap-3 text-center text-xs py-2 px-3 rounded-xl bg-slate-100/70 dark:bg-black/20 border border-slate-200/50 dark:border-white/5">
                     <div>
                       <span className="text-[10px] text-slate-500 dark:text-gray-400 block">Subscribers</span>
                       <span className="font-bold text-slate-900 dark:text-white">
                         {Number(ch.subscribers || 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 dark:text-gray-400 block">Total Views</span>
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {Number(ch.totalViews || 0).toLocaleString()}
                       </span>
                     </div>
                     <div>
@@ -752,13 +1003,25 @@ export default function YouTubeDashboardPage() {
                   Daily viewer traffic and watch time hours ({dateRange})
                 </p>
               </div>
+              <div className="flex items-center gap-1.5">
+                {!hasAnalyticsAccess && (
+                  <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <Lock className="w-2.5 h-2.5 text-amber-500" />
+                    Watch Time: Cannot Access (Studio Only)
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                  Live Daily
+                </span>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-6 pt-2 h-80">
             {timeseries.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-gray-400 text-xs">
                 <Calendar className="w-8 h-8 text-slate-400 mb-2 opacity-60" />
-                No daily time-series data available for this range yet.
+                No daily time-series data recorded for this range yet.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -776,18 +1039,12 @@ export default function YouTubeDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
                   <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
                   <YAxis stroke="#6b7280" fontSize={11} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      color: '#fff',
-                      borderRadius: '1.25rem',
-                      fontSize: '12px',
-                    }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Area type="monotone" dataKey="views" name="Views" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorViewsYt)" />
-                  <Area type="monotone" dataKey="watchTimeHours" name="Watch Time (Hrs)" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorWatchYt)" />
+                  {hasAnalyticsAccess && (
+                    <Area type="monotone" dataKey="watchTimeHours" name="Watch Time (Hrs)" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorWatchYt)" />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -807,10 +1064,47 @@ export default function YouTubeDashboardPage() {
                   Subscribers gained vs lost per day ({dateRange})
                 </p>
               </div>
+              <span className={`inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold border ${
+                hasAnalyticsAccess
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              }`}>
+                {hasAnalyticsAccess ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Real-Time Live
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3 h-3 text-amber-500" />
+                    Cannot Access (Studio Only)
+                  </>
+                )}
+              </span>
             </div>
           </CardHeader>
           <CardContent className="p-6 pt-2 h-80">
-            {timeseries.length === 0 ? (
+            {!hasAnalyticsAccess ? (
+              <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3 border border-amber-500/20 shadow-inner">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Cannot Access YouTube Studio Subscriber Churn
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-gray-400 max-w-sm mt-1.5 mb-4 leading-relaxed">
+                  YouTube Studio does not expose daily subscribers gained or lost publicly. This channel is connected via Public Identifier only. Connect via Google OAuth to unlock studio churn curves.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => handleConnectClick('oauth')}
+                  className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white text-xs px-4 py-1.5 shadow-md shadow-red-600/20 gap-1.5 cursor-pointer"
+                >
+                  <YoutubeIcon className="w-3.5 h-3.5" />
+                  Unlock with Google OAuth
+                </Button>
+              </div>
+            ) : timeseries.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-gray-400 text-xs">
                 <Users className="w-8 h-8 text-slate-400 mb-2 opacity-60" />
                 No subscriber growth data recorded for this range yet.
@@ -821,18 +1115,10 @@ export default function YouTubeDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
                   <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
                   <YAxis stroke="#6b7280" fontSize={11} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      color: '#fff',
-                      borderRadius: '1.25rem',
-                      fontSize: '12px',
-                    }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="subscribersGained" name="Gained" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="subscribersLost" name="Lost" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="subscribersGained" name="Subscribers Gained" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="subscribersLost" name="Subscribers Lost" fill="#f43f5e" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -849,8 +1135,19 @@ export default function YouTubeDashboardPage() {
                   Audience Engagement Over Time
                 </CardTitle>
                 <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
-                  Tracking likes, comments, and shares across video uploads ({dateRange})
+                  Tracking likes, comments{hasAnalyticsAccess ? ', and shares' : ''} across video uploads ({dateRange})
                 </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {!hasAnalyticsAccess && (
+                  <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                    Public Video Data
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse"></span>
+                  Live Telemetry
+                </span>
               </div>
             </div>
           </CardHeader>
@@ -866,19 +1163,13 @@ export default function YouTubeDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
                   <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
                   <YAxis stroke="#6b7280" fontSize={11} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      color: '#fff',
-                      borderRadius: '1.25rem',
-                      fontSize: '12px',
-                    }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Line type="monotone" dataKey="likes" name="Likes" stroke="#ec4899" strokeWidth={2.5} dot={false} />
                   <Line type="monotone" dataKey="comments" name="Comments" stroke="#14b8a6" strokeWidth={2.5} dot={false} />
-                  <Line type="monotone" dataKey="shares" name="Shares" stroke="#f59e0b" strokeWidth={2.5} dot={false} />
+                  {hasAnalyticsAccess && (
+                    <Line type="monotone" dataKey="shares" name="Shares" stroke="#f59e0b" strokeWidth={2.5} dot={false} />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             )}
