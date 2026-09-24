@@ -165,40 +165,16 @@ export default function ProfileDashboard() {
           <div className="flex items-center gap-5">
             <div className="relative">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-600 text-white font-bold text-2xl flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-500/20">
-                {userDetails.name?.charAt(0) || 'A'}
+                {userDetails.name?.charAt(0) || 'S'}
               </div>
               <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#111827] flex items-center justify-center text-white" title="Active">
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </span>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                  {userDetails.name || 'Administrator'}
-                </h1>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 capitalize">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  {userDetails.role?.replace('_', ' ') || 'Admin'}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  {userDetails.email}
-                </span>
-                {userDetails.companyName && (
-                  <span className="flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                    {userDetails.companyName}
-                  </span>
-                )}
-                {userDetails.companyRole && (
-                  <span className="flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                    {userDetails.companyRole}
-                  </span>
-                )}
-              </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                {userDetails.name || 'Super Admin'}
+              </h1>
             </div>
           </div>
 
