@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { 
   LayoutDashboard, 
   Users, 
-  Settings, 
   LogOut, 
   UserPlus, 
   User, 
@@ -14,7 +13,8 @@ import {
   BarChart3,
   ChevronRight,
   Menu,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
@@ -50,19 +50,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!mounted) return null;
 
-  // My Profile is placed FIRST as requested
+  // My Profile is placed FIRST, and Settings has been removed as requested
   const navItems = [
     {
       href: '/dashboard/profile',
       label: 'My Profile',
       icon: User,
       active: pathname === '/dashboard/profile',
+      color: 'text-indigo-500',
     },
     {
       href: '/dashboard',
       label: 'LinkedIn Overview',
       icon: LayoutDashboard,
       active: pathname === '/dashboard' || (pathname.startsWith('/dashboard/') && !['/dashboard/youtube', '/dashboard/profile', '/dashboard/users', '/dashboard/reports', '/dashboard/settings', '/dashboard/company'].some(p => pathname.startsWith(p))),
+      color: 'text-blue-500',
     },
     {
       href: '/dashboard/youtube',
@@ -70,6 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: YoutubeIcon,
       active: pathname.startsWith('/dashboard/youtube'),
       badge: 'Live',
+      color: 'text-red-500',
     },
     ...(userRole === 'super_admin' ? [
       {
@@ -77,12 +80,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         label: 'User Management',
         icon: Users,
         active: pathname === '/dashboard/users',
+        color: 'text-purple-500',
       },
       {
         href: '/dashboard/users/add',
         label: 'Add New User',
         icon: UserPlus,
         active: pathname === '/dashboard/users/add',
+        color: 'text-emerald-500',
       },
     ] : []),
     {
@@ -90,12 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: 'Reports & Export',
       icon: FileText,
       active: pathname === '/dashboard/reports',
-    },
-    {
-      href: '/dashboard/settings',
-      label: 'Settings',
-      icon: Settings,
-      active: pathname === '/dashboard/settings',
+      color: 'text-amber-500',
     },
   ];
 
@@ -106,7 +106,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname === '/dashboard/users') return 'User Management';
     if (pathname === '/dashboard/users/add') return 'Add System User';
     if (pathname === '/dashboard/reports') return 'Analytics Reports';
-    if (pathname === '/dashboard/settings') return 'Account Settings';
     if (pathname.startsWith('/dashboard/')) return 'Profile Analytics';
     return 'Dashboard';
   };
@@ -116,7 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -127,8 +126,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }`}>
         {/* Brand Header */}
         <div className="h-16 px-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <Link href="/dashboard/profile" prefetch={true} className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
+          <Link href="/dashboard/profile" prefetch={true} className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
               <BarChart3 className="w-5 h-5" />
             </div>
             <div>
@@ -150,9 +149,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Navigation
+        <div className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Main Navigation
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -162,14 +161,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 prefetch={true}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 cursor-pointer ${
                   item.active
-                    ? 'bg-indigo-50 dark:bg-indigo-600/15 text-indigo-700 dark:text-indigo-400 font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-600/15 text-indigo-700 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 dark:border-indigo-500'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${item.active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                    item.active 
+                      ? 'bg-white dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 shadow-xs' 
+                      : 'text-slate-400 dark:text-slate-500'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
@@ -182,28 +187,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </div>
 
-        {/* Sidebar Footer: User Card & Sign Out */}
+        {/* Sidebar Footer: User Identity Card & Sign Out */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-semibold text-xs flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800/80">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-semibold text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
               {userName.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                 {userName}
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate capitalize">
-                {userRole?.replace('_', ' ') || 'User'}
-              </p>
+              <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 capitalize truncate">
+                <Shield className="w-3 h-3 text-indigo-500" />
+                <span>{userRole?.replace('_', ' ') || 'User'}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-0.5">
             <ThemeToggle />
             <button
               type="button"
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
@@ -226,7 +232,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">Dashboard</span>
+              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">MonitorHQ</span>
               <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 hidden sm:inline" />
               <h1 className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">
                 {getPageTitle()}
@@ -237,7 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>System Live</span>
+              <span>Collector Live</span>
             </div>
           </div>
         </header>

@@ -130,11 +130,6 @@ export default function DashboardOverview() {
     return sum + (latest?.views || 0);
   }, 0);
 
-  const totalPosts = accounts.reduce((sum, a) => {
-    const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
-    return sum + (latest?.recentPosts || 0);
-  }, 0);
-
   const syncedTodayCount = accounts.filter(a => {
     const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
     return latest?.lastCollectionTime && new Date(latest.lastCollectionTime).toDateString() === new Date().toDateString();
