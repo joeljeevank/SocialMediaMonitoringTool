@@ -11,7 +11,6 @@ import {
   ArrowRight, 
   Settings, 
   Users, 
-  BarChart3, 
   CheckCircle2, 
   Lock, 
   Eye, 
@@ -324,72 +323,6 @@ export default function ProfileDashboard() {
             </Dialog>
           </div>
         </div>
-      </div>
-
-      {/* Quick Access Modules Navigation */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link
-          href="/dashboard"
-          prefetch={true}
-          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500/60 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between card-interactive"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm group-hover:scale-105 transition-transform shadow-xs">
-              in
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                LinkedIn Monitoring
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                View profile engagement & posts
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
-        </Link>
-
-        <Link
-          href="/dashboard/youtube"
-          prefetch={true}
-          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-red-500 dark:hover:border-red-500/60 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between card-interactive"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-              <YoutubeIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                YouTube Analytics
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Channel intelligence & video stats
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-red-600 group-hover:translate-x-1 transition-all" />
-        </Link>
-
-        <Link
-          href="/dashboard/reports"
-          prefetch={true}
-          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500/60 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between card-interactive"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-              <BarChart3 className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                Reports & Export
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Generate CSV, JSON & PDF analytics
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-        </Link>
       </div>
 
       {/* Connected Social Accounts Container */}
