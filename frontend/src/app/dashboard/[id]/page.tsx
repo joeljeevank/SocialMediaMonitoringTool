@@ -497,30 +497,30 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* Quick Metadata Stats with Curved 2xl Boxes */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-white/10 text-xs">
-              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
-                <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Sync Status</span>
+            {/* Quick Metadata Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-slate-800 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Sync Status</span>
                 <span className={`font-semibold flex items-center gap-1.5 ${isSynchronized ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                   <span className={`w-2 h-2 rounded-full ${isSynchronized ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
                   {isSynchronized ? 'Synchronized' : 'Not Synced'}
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
-                <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Data Source</span>
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Data Source</span>
                 <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
                   {scrapedData?.dataSource || latest?.dataSource || 'LinkedIn Scraper'}
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
-                <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Posts Analyzed</span>
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Posts Analyzed</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
                   {scrapedData?.posts?.length ?? latest?.recentPosts ?? 0} posts
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-white/5 p-3.5 rounded-2xl border border-purple-100 dark:border-white/5">
-                <span className="text-slate-500 dark:text-gray-400 block mb-0.5">Scraper Engine</span>
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Scraper Engine</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">Playwright Active</span>
               </div>
             </div>
@@ -530,7 +530,7 @@ export default function AnalyticsPage() {
 
       {/* Published LinkedIn Posts Table & Explorer */}
       {(scrapedData || posts.length > 0 || totalPosts > 0) && (
-        <Card className="glass border border-purple-200 dark:border-purple-500/30 shadow-xl overflow-hidden rounded-3xl">
+        <Card className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden rounded-2xl">
           <CardHeader className="p-6 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -555,7 +555,7 @@ export default function AnalyticsPage() {
                       setPostSearch(e.target.value);
                       setPostPage(1);
                     }}
-                    className="rounded-full pl-9 pr-4 py-1.5 text-xs h-9 bg-slate-100 dark:bg-white/5 border-purple-200 dark:border-white/10 w-44 sm:w-56 focus-visible:ring-indigo-500"
+                    className="rounded-xl pl-9 pr-4 py-1.5 text-xs h-9 bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 w-44 sm:w-56 focus-visible:ring-indigo-500"
                   />
                 </div>
 
@@ -566,7 +566,7 @@ export default function AnalyticsPage() {
                       setPostSort(e.target.value);
                       setPostPage(1);
                     }}
-                    className="rounded-full px-3.5 py-1.5 text-xs h-9 bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-white/10 text-slate-900 dark:text-white font-medium appearance-none pr-8 cursor-pointer"
+                    className="rounded-xl px-3.5 py-1.5 text-xs h-9 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-medium appearance-none pr-8 cursor-pointer"
                   >
                     <option value="createdAt" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Latest Published</option>
                     <option value="impressions" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Impressions</option>
@@ -580,7 +580,7 @@ export default function AnalyticsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setPostOrder(postOrder === 'ASC' ? 'DESC' : 'ASC')}
-                  className="h-9 px-3 rounded-full text-xs font-semibold"
+                  className="h-9 px-3 rounded-xl text-xs font-semibold"
                   title={`Sort ${postOrder === 'ASC' ? 'Descending' : 'Ascending'}`}
                 >
                   {postOrder === 'ASC' ? '▲ Asc' : '▼ Desc'}
@@ -591,15 +591,15 @@ export default function AnalyticsPage() {
           
           <CardContent className="p-6 pt-0">
             {scrapedData?.unavailable && scrapedData.unavailable.length > 0 && (
-              <div className="mb-4 text-xs bg-slate-100 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-300">
+              <div className="mb-4 text-xs bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
                 <strong className="text-slate-800 dark:text-white">Note on metrics:</strong> Direct public profile scraping extracts likes, comments, and post counts. Unavailable metrics for this view: {scrapedData.unavailable.join(', ')}.
               </div>
             )}
 
-            <div className="overflow-x-auto rounded-2xl border border-purple-200 dark:border-white/10">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="bg-slate-100 dark:bg-white/5 border-b border-purple-200 dark:border-white/10 text-slate-700 dark:text-gray-300 font-semibold text-xs uppercase tracking-wider">
+                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs uppercase tracking-wider">
                     <th className="py-3.5 px-5 whitespace-nowrap">Author</th>
                     <th className="py-3.5 px-4 min-w-[260px]">Post Description</th>
                     <th className="py-3.5 px-4 text-center whitespace-nowrap">Impressions</th>
@@ -609,7 +609,7 @@ export default function AnalyticsPage() {
                     <th className="py-3.5 px-5 text-right whitespace-nowrap">Link</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-purple-100 dark:divide-white/5">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {((posts.length === 0 && !scrapedData?.posts) || (posts.length === 0 && scrapedData?.posts?.length === 0)) ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-slate-500 dark:text-gray-400">
@@ -618,7 +618,7 @@ export default function AnalyticsPage() {
                     </tr>
                   ) : (
                     (posts.length > 0 ? posts : (scrapedData?.posts || [])).map((post: any, idx: number) => (
-                      <tr key={post.id || idx} className="hover:bg-purple-500/5 transition-colors">
+                      <tr key={post.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                         <td className="py-3.5 px-5 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
                           {cleanAuthor(post.author)}
                         </td>
