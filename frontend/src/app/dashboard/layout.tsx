@@ -37,6 +37,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setUserRole(localStorage.getItem('user_role'));
       setUserName(localStorage.getItem('user_name') || 'Administrator');
     }
+
+    // Prefetch all key dashboard routes for instant sub-second transitions
+    router.prefetch('/dashboard/profile');
+    router.prefetch('/dashboard');
+    router.prefetch('/dashboard/youtube');
+    router.prefetch('/dashboard/reports');
+    router.prefetch('/dashboard/users');
+    router.prefetch('/dashboard/users/add');
   }, [router]);
 
   const handleLogout = () => {
@@ -261,7 +269,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Dynamic Page Scroll Area */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-[#090D16] custom-scrollbar">
-          <div className="max-w-7xl mx-auto space-y-6">
+          <div key={pathname} className="max-w-7xl mx-auto space-y-6 animate-in fade-in-50 duration-100">
             {children}
           </div>
         </main>
