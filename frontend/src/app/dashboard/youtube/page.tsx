@@ -584,11 +584,11 @@ export default function YouTubeDashboardPage() {
               className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
               <option value="all" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
-                🌐 All Channels ({channels.length})
+                All Channels ({channels.length})
               </option>
               {channels.map((ch) => (
                 <option key={ch.id} value={ch.id} className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
-                  ▶ {ch.title} {ch.isOAuth ? '🔒 [Studio]' : '👁 [Public]'}
+                  {ch.title} {ch.isOAuth ? '[Studio]' : '[Public]'}
                 </option>
               ))}
               <option value="__add__" className="bg-white dark:bg-[#090d16] text-red-500 font-bold py-1">

@@ -658,7 +658,7 @@ function ReportsContent() {
                       onChange={(e) => setSelectedYouTubeChannelId(e.target.value)}
                     >
                       <option value="all" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-2 font-semibold">
-                        🌐 All Connected Channels (Aggregate - {channels.length} channels)
+                        All Connected Channels (Aggregate - {channels.length} channels)
                       </option>
                       {channels.map((ch) => (
                         <option
@@ -666,7 +666,7 @@ function ReportsContent() {
                           value={ch.id}
                           className="bg-white text-slate-900 dark:bg-[#090d16] dark:text-white py-2"
                         >
-                          ▶ {ch.title} {ch.customUrl ? `(${ch.customUrl})` : ''} • {Number(ch.subscribers || 0).toLocaleString()} Subs
+                          {ch.title} {ch.customUrl ? `(${ch.customUrl})` : ''} • {Number(ch.subscribers || 0).toLocaleString()} Subs
                         </option>
                       ))}
                     </select>
