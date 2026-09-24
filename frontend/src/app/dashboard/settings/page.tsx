@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { KeyRound, ShieldCheck, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  Eye, 
+  EyeOff, 
+  CheckCircle2, 
+  AlertCircle 
+} from 'lucide-react';
 
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -17,12 +22,13 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
+  const [companyName, setCompanyName] = useState('');
 
   useEffect(() => {
-    const email = localStorage.getItem('user_email');
-    if (email) {
-      setUserEmail(email);
-    }
+    setUserEmail(localStorage.getItem('user_email') || 'admin@socialmonitor.com');
+    setUserName(localStorage.getItem('user_name') || 'Administrator');
+    setCompanyName(localStorage.getItem('company_name') || 'Enterprise HQ');
   }, []);
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -36,7 +42,7 @@ export default function SettingsPage() {
     }
     
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+      setError('New password must be at least 6 characters long.');
       return;
     }
 
@@ -57,7 +63,7 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        setSuccess('Password updated successfully! Your account credentials have been updated.');
+        setSuccess('Password changed successfully.');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -73,126 +79,151 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 select-none">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-400 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/25">
-          <KeyRound className="w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Account Security</h1>
-          <p className="text-slate-500 dark:text-gray-400 text-xs sm:text-sm mt-0.5">Manage your credentials and security preferences</p>
+    <div className="max-w-3xl space-y-6">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+          Account Settings
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          Manage your account preferences, profile details, and security credentials.
+        </p>
+      </div>
+
+      {/* Profile Overview Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
+          Profile Information
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-500 dark:text-slate-400">Name</Label>
+            <Input 
+              value={userName} 
+              disabled 
+              className="bg-slate-50 dark:bg-[#0B0F19] text-xs h-10 border-slate-200 dark:border-slate-700" 
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-500 dark:text-slate-400">Email Address</Label>
+            <Input 
+              value={userEmail} 
+              disabled 
+              className="bg-slate-50 dark:bg-[#0B0F19] text-xs h-10 border-slate-200 dark:border-slate-700" 
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-500 dark:text-slate-400">Organization</Label>
+            <Input 
+              value={companyName} 
+              disabled 
+              className="bg-slate-50 dark:bg-[#0B0F19] text-xs h-10 border-slate-200 dark:border-slate-700" 
+            />
+          </div>
         </div>
       </div>
 
-      <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-xl rounded-3xl overflow-hidden">
-        <CardHeader className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/5">
-          <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-cyan-400" />
-            Change Password
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8">
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="currentPassword" className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-cyan-400" />
-                Current Password
-              </Label>
-              <div className="relative">
-                <input
-                  id="currentPassword"
-                  type={showCurrent ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  required
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 pr-10 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-cyan-300 cursor-pointer"
-                >
-                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+      {/* Change Password Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
+          Security & Password
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+          Ensure your account uses a strong, secure password.
+        </p>
+
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{success}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleChangePassword} className="space-y-4 max-w-lg">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              Current Password
+            </Label>
+            <div className="relative">
+              <Input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                required
+                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="newPassword" className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-cyan-400" />
-                New Password
-              </Label>
-              <div className="relative">
-                <input
-                  id="newPassword"
-                  type={showNew ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min. 6 characters)"
-                  required
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 pr-10 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew(!showNew)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-cyan-300 cursor-pointer"
-                >
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              New Password
+            </Label>
+            <div className="relative">
+              <Input
+                type={showNew ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                required
+                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-xs font-bold text-slate-700 dark:text-gray-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-cyan-400" />
-                Confirm New Password
-              </Label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirm ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password"
-                  required
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500 h-11 px-3.5 pr-10 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 shadow-sm font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-cyan-300 cursor-pointer"
-                >
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              Confirm New Password
+            </Label>
+            <div className="relative">
+              <Input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                required
+                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
-            {error && (
-              <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold animate-in fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="flex-1 leading-relaxed">{error}</span>
-              </div>
-            )}
-            
-            {success && (
-              <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="flex-1 leading-relaxed">{success}</span>
-              </div>
-            )}
-
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-bold h-11 rounded-xl shadow-lg shadow-cyan-500/25 border-none mt-4 transition-all cursor-pointer"
-            >
-              {loading ? 'Updating Credentials...' : 'Save New Password'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-10 px-5 rounded-xl mt-2"
+          >
+            {loading ? 'Updating Password...' : 'Save Password'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
-

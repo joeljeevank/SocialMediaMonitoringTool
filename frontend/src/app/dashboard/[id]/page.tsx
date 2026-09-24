@@ -397,7 +397,7 @@ export default function AnalyticsPage() {
 
         {/* Action Controls & Realtime Last Collected Indicator with Smooth Curved Pills */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-cyan-500/20 shadow-sm">
+          <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="relative flex h-2.5 w-2.5 shrink-0">
               {isSynchronized ? (
                 <>
@@ -432,9 +432,9 @@ export default function AnalyticsPage() {
           <Button 
             onClick={handleCollectLinkedInData} 
             disabled={collecting}
-            className="rounded-full bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-bold px-7 py-2.5 shadow-lg shadow-cyan-500/20 transition-all hover:shadow-cyan-500/30 flex items-center justify-center gap-2 cursor-pointer h-11"
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 h-10 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm"
           >
-            <RefreshCw className={`w-4 h-4 ${collecting ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${collecting ? 'animate-spin' : ''}`} />
             {collecting ? 'Collecting Data...' : 'Collect LinkedIn Data'}
           </Button>
         </div>
@@ -452,7 +452,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Prominent LinkedIn Data Collection Status Card - Curved 3xl edges */}
-      <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-xl overflow-hidden rounded-3xl">
+      <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden rounded-3xl">
         <CardContent className="p-6 sm:p-7">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div className="flex items-start sm:items-center gap-4">

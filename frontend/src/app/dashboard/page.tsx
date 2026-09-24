@@ -2,13 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Activity, Users, Trash2 } from 'lucide-react';
+import { 
+  Plus, 
+  Users, 
+  Trash2, 
+  ArrowRight, 
+  FileText 
+} from 'lucide-react';
 
 type Analytics = {
   likes: number;
@@ -35,8 +40,6 @@ export default function DashboardOverview() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('');
-
-
 
   const fetchAccounts = async () => {
     try {
@@ -67,7 +70,7 @@ export default function DashboardOverview() {
         },
         body: JSON.stringify({
           platform: 'LinkedIn',
-          username: newUsername
+          username: newUsername.trim(),
         }),
       });
       if (res.ok) {
@@ -75,18 +78,18 @@ export default function DashboardOverview() {
         setNewUsername('');
         fetchAccounts();
       } else {
-        alert('Failed to connect account');
+        alert('Failed to connect LinkedIn account. Please check the username.');
       }
     } catch (error) {
       console.error('Error connecting account', error);
-      alert('Error connecting account');
+      alert('Error connecting account.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDisconnect = async (id: number) => {
-    if (!confirm('Are you sure you want to disconnect this LinkedIn account?')) return;
-    
+    if (!confirm('Are you sure you want to disconnect this LinkedIn profile?')) return;
     try {
       const res = await fetch(`http://localhost:3001/accounts/${id}`, {
         method: 'DELETE',
@@ -102,78 +105,96 @@ export default function DashboardOverview() {
     }
   };
 
+  const totalFollowers = accounts.reduce((sum, a) => {
+    const sorted = a.analytics && a.analytics.length > 0 
+      ? [...a.analytics].sort((x, y) => new Date(x.lastCollectionTime || x.date).getTime() - new Date(y.lastCollectionTime || y.date).getTime())
+      : [];
+    const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+    const count = (latest?.followers && latest.followers > 0)
+      ? latest.followers
+      : (sorted.slice().reverse().find(x => x.followers > 0)?.followers || 0);
+    return sum + count;
+  }, 0);
+
+  const totalPosts = accounts.reduce((sum, a) => {
+    const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
+    return sum + (latest?.recentPosts || 0);
+  }, 0);
+
+  const syncedTodayCount = accounts.filter(a => {
+    const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
+    return latest?.lastCollectionTime && new Date(latest.lastCollectionTime).toDateString() === new Date().toDateString();
+  }).length;
+
   return (
     <div className="space-y-6">
+      {/* Header section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            LinkedIn Monitoring
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            LinkedIn Overview
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400 mt-1">
-            Real-time scraping, impression metrics, and engagement telemetry.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Monitor LinkedIn profile analytics, follower growth, and post metrics.
           </p>
         </div>
-        
-        {(role === 'user' || role === 'manager' || role === 'super_admin') && (
+
+        {(role === 'user' || role === 'manager' || role === 'super_admin' || !role) && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger render={
-              <Button className="rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white gap-2 font-bold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 border-none transition-all cursor-pointer h-11 px-5">
-                <Plus className="w-4 h-4" /> Connect LinkedIn
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm h-10 px-4 rounded-xl shadow-sm flex items-center gap-2 cursor-pointer">
+                <Plus className="w-4 h-4" />
+                <span>Connect Profile</span>
               </Button>
             } />
-            <DialogContent className="sm:max-w-md bg-white dark:bg-[#080d1a] border border-slate-200 dark:border-cyan-500/30 p-0 overflow-hidden shadow-2xl rounded-3xl">
-              <div className="bg-[#0077b5] p-5 flex items-center justify-between">
-                <div className="text-white font-bold text-lg flex items-center gap-2.5">
-                  <div className="bg-white text-[#0077b5] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-sm shadow-sm">in</div>
-                  <span>Connect LinkedIn Account</span>
-                </div>
-              </div>
-              <div className="p-6 space-y-5 text-slate-900 dark:text-white">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-cyan-500/20">
-                    SM
+            <DialogContent className="sm:max-w-md bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base">
+                    in
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-slate-900 dark:text-white">MonitorHQ Analytics</h3>
-                    <p className="text-xs text-slate-500 dark:text-gray-400">Playwright Scraping Engine Connector</p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Connect LinkedIn Profile
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Enter the LinkedIn username or vanity URL to track
+                    </p>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-black/40 p-4 rounded-2xl border border-slate-200 dark:border-cyan-500/20 space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
-                  <h4 className="font-semibold text-slate-800 dark:text-cyan-300 text-xs uppercase tracking-wider">MonitorHQ will automatically:</h4>
-                  <ul className="space-y-1.5 list-disc pl-4 text-xs">
-                    <li>Extract public profile vanity name and headline</li>
-                    <li>Collect live post impressions, reactions, and comment counts</li>
-                    <li>Synchronize data on-demand or on hourly automated cycles</li>
-                  </ul>
-                </div>
-
-                <form onSubmit={handleConnect} className="space-y-4">
+                <form onSubmit={handleConnect} className="space-y-4 pt-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700 dark:text-gray-300">LinkedIn Profile Username / Vanity URL</Label>
+                    <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      LinkedIn Username / Public Handle
+                    </Label>
                     <Input
                       placeholder="e.g. johndoe or joeljeevankumar"
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
                       required
-                      className="bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-cyan-500/40 text-slate-900 dark:text-white h-11 px-3.5 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500"
+                      className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10 rounded-xl"
                     />
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                      The public vanity handle found in the LinkedIn profile URL.
+                    </p>
                   </div>
-                  <div className="flex gap-3 pt-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex-1 text-slate-700 dark:text-gray-300 border-slate-300 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl h-11 cursor-pointer" 
+
+                  <div className="flex gap-2.5 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => setIsDialogOpen(false)}
+                      className="flex-1 rounded-xl h-10 text-xs font-semibold text-slate-600 dark:text-slate-300"
                     >
                       Cancel
                     </Button>
-                    <Button 
-                      type="submit" 
-                      className="flex-1 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold rounded-xl h-11 shadow-md shadow-cyan-500/20 cursor-pointer" 
+                    <Button
+                      type="submit"
                       disabled={loading}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-10 text-xs font-semibold"
                     >
-                      {loading ? 'Connecting...' : 'Authorize & Connect'}
+                      {loading ? 'Connecting...' : 'Connect Profile'}
                     </Button>
                   </div>
                 </form>
@@ -183,223 +204,194 @@ export default function DashboardOverview() {
         )}
       </div>
 
-      {/* KPI Overview Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 select-none">
-        <Card className="bg-white/80 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-sm hover:shadow-md rounded-2xl cursor-default transition-all hover:scale-[1.02]">
-          <CardHeader className="px-5 pt-5 pb-1">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 flex items-center justify-between">
-              <span>Connected Accounts</span>
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">in</div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-1">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{accounts.length}</div>
-            <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">LinkedIn monitoring active</p>
-          </CardContent>
-        </Card>
+      {/* KPI Overview Tiles */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-medium">Tracked Profiles</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">in</div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+            {accounts.length}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Active monitored accounts
+          </p>
+        </div>
 
-        <Card className="bg-white/80 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-sm hover:shadow-md rounded-2xl cursor-default transition-all hover:scale-[1.02]">
-          <CardHeader className="px-5 pt-5 pb-1">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 flex items-center justify-between">
-              <span>Synchronized Today</span>
-              <Activity className="w-4 h-4 text-emerald-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-1">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-              {accounts.filter(a => {
-                const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
-                return latest?.lastCollectionTime && new Date(latest.lastCollectionTime).toDateString() === new Date().toDateString();
-              }).length}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">Real-time synced profiles</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-medium">Total Followers</span>
+            <Users className="w-4 h-4 text-indigo-500" />
+          </div>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+            {totalFollowers.toLocaleString()}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Across all monitored profiles
+          </p>
+        </div>
 
-        <Card className="bg-white/80 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-sm hover:shadow-md rounded-2xl cursor-default transition-all hover:scale-[1.02]">
-          <CardHeader className="px-5 pt-5 pb-1">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 flex items-center justify-between">
-              <span>Total Followers</span>
-              <Users className="w-4 h-4 text-cyan-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-1">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {accounts.reduce((sum, a) => {
-                const sorted = a.analytics && a.analytics.length > 0 
-                  ? [...a.analytics].sort((x, y) => new Date(x.lastCollectionTime || x.date).getTime() - new Date(y.lastCollectionTime || y.date).getTime())
-                  : [];
-                const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
-                const count = (latest?.followers && latest.followers > 0)
-                  ? latest.followers
-                  : (sorted.slice().reverse().find(x => x.followers > 0)?.followers || 0);
-                return sum + count;
-              }, 0).toLocaleString()}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">Across monitored profiles</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-medium">Tracked Posts</span>
+            <FileText className="w-4 h-4 text-slate-400" />
+          </div>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+            {totalPosts.toLocaleString()}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Posts analyzed & monitored
+          </p>
+        </div>
 
-        <Card className="bg-white/80 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-sm hover:shadow-md rounded-2xl cursor-default transition-all hover:scale-[1.02]">
-          <CardHeader className="px-5 pt-5 pb-1">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 flex items-center justify-between">
-              <span>Posts Analyzed</span>
-              <Activity className="w-4 h-4 text-indigo-400" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-1">
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {accounts.reduce((sum, a) => {
-                const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
-                return sum + (latest?.recentPosts || 0);
-              }, 0).toLocaleString()}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">Posts scraped & tracked</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-medium">Synced Today</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+            {syncedTodayCount} / {accounts.length}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Up-to-date data collections
+          </p>
+        </div>
       </div>
 
-      {/* Connected Profiles Table Card */}
-      <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-lg rounded-3xl overflow-hidden">
-        <CardHeader className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/5">
-          <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Monitored LinkedIn Accounts</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-              {accounts.length} Active
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+      {/* Accounts Table Card */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+              Monitored Profiles
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              List of connected LinkedIn handles with latest metrics
+            </p>
+          </div>
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            {accounts.length} accounts
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-black/30">
-              <TableRow className="border-b border-slate-200 dark:border-white/10 hover:bg-transparent">
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Account</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Followers</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Views</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Likes</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Comments</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Posts</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Last Synchronized</TableHead>
-                <TableHead className="text-right text-slate-700 dark:text-cyan-300 font-bold">Actions</TableHead>
+            <TableHeader className="bg-slate-50/70 dark:bg-slate-900/50">
+              <TableRow className="border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Account</TableHead>
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Followers</TableHead>
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Impressions</TableHead>
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Reactions</TableHead>
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Comments</TableHead>
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Posts</TableHead>
+                <TableHead className="text-xs font-semibold text-slate-600 dark:text-slate-300">Last Synced</TableHead>
+                <TableHead className="text-right text-xs font-semibold text-slate-600 dark:text-slate-300">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {accounts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16 text-slate-500 dark:text-gray-400">
+                  <TableCell colSpan={8} className="text-center py-12 text-slate-500 dark:text-slate-400">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">
-                      <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 dark:bg-white/5 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-                        <Users className="w-7 h-7" />
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                        <Users className="w-6 h-6" />
                       </div>
-                      <div className="space-y-1">
-                        <p className="font-bold text-base text-slate-900 dark:text-white">No LinkedIn Profiles Connected</p>
-                        <p className="text-xs text-slate-500 dark:text-gray-400">Connect a LinkedIn profile username to start tracking metrics, post impressions, and engagement.</p>
+                      <div>
+                        <p className="font-semibold text-sm text-slate-900 dark:text-white">No accounts connected yet</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Connect a LinkedIn account username to begin collecting real-time impressions and metrics.
+                        </p>
                       </div>
                       <Button
                         type="button"
                         onClick={() => setIsDialogOpen(true)}
-                        className="rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold px-5 h-9 shadow-md shadow-cyan-500/20 border-none mt-2 cursor-pointer"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl h-9 px-4"
                       >
-                        <Plus className="w-3.5 h-3.5 mr-1.5" /> Connect LinkedIn Account
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                        Connect Profile
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 accounts.map((acc) => {
-                  const sortedAnalytics = acc.analytics 
+                  const sorted = acc.analytics 
                     ? [...acc.analytics].sort((a, b) => new Date(a.lastCollectionTime || a.date).getTime() - new Date(b.lastCollectionTime || b.date).getTime()) 
                     : [];
-                  const latestAnalytics = sortedAnalytics.length > 0 
-                    ? sortedAnalytics[sortedAnalytics.length - 1] 
-                    : null;
-                  
-                  const effectiveFollowers = (latestAnalytics?.followers && latestAnalytics.followers > 0)
-                    ? latestAnalytics.followers
-                    : (sortedAnalytics.slice().reverse().find(x => x.followers > 0)?.followers || 0);
+                  const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+                  const followers = (latest?.followers && latest.followers > 0)
+                    ? latest.followers
+                    : (sorted.slice().reverse().find(x => x.followers > 0)?.followers || 0);
+
+                  const isToday = latest?.lastCollectionTime 
+                    ? new Date(latest.lastCollectionTime).toDateString() === new Date().toDateString()
+                    : false;
 
                   return (
-                    <TableRow key={acc.id} className="border-b border-slate-200 dark:border-white/5 hover:bg-cyan-500/5 transition-colors">
-                      <TableCell className="font-medium text-slate-900 dark:text-white flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">in</div>
-                          <span className="font-bold">{acc.username}</span>
-                        </div>
-                        <span className="text-slate-500 dark:text-gray-400 text-xs">{acc.platform} Connected</span>
-                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                          <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20">
-                            <span className="w-1 h-1 rounded-full bg-cyan-400"></span>
-                            {acc.status}
-                          </span>
-                          {latestAnalytics?.lastCollectionTime && (new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()) ? (
-                            <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                              <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                              Synchronized
+                    <TableRow key={acc.id} className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            in
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                              {acc.username}
+                            </p>
+                            <span className="text-[11px] text-slate-400">
+                              {acc.platform}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                              <span className="w-1 h-1 rounded-full bg-amber-500"></span>
-                              Pending Sync
-                            </span>
-                          )}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-700 dark:text-gray-200 font-bold">{latestAnalytics ? effectiveFollowers.toLocaleString() : '-'}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.views ?? 0).toLocaleString() : '-'}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.likes ?? 0).toLocaleString() : '-'}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.comments ?? 0).toLocaleString() : '-'}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.recentPosts ?? 0).toLocaleString() : '-'}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-gray-300 text-xs">
-                        {latestAnalytics?.lastCollectionTime ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {new Date(latestAnalytics.lastCollectionTime).toLocaleString('en-US', { 
-                                year: 'numeric', 
-                                month: 'short', 
-                                day: 'numeric', 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
+                      <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        {latest ? followers.toLocaleString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                        {latest ? (latest.views ?? 0).toLocaleString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                        {latest ? (latest.likes ?? 0).toLocaleString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                        {latest ? (latest.comments ?? 0).toLocaleString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                        {latest ? (latest.recentPosts ?? 0).toLocaleString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                        {latest?.lastCollectionTime ? (
+                          <div className="flex flex-col">
+                            <span>
+                              {new Date(latest.lastCollectionTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
-                              new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
-                                ? 'text-emerald-600 dark:text-emerald-400'
-                                : 'text-amber-600 dark:text-amber-400'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
-                                  ? 'bg-emerald-500 animate-pulse'
-                                  : 'bg-amber-500'
-                              }`}></span>
-                              {new Date(latestAnalytics.lastCollectionTime).toDateString() === new Date().toDateString()
-                                ? 'Synchronized'
-                                : 'Out of sync'}
+                            <span className={`text-[10px] font-medium ${isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                              {isToday ? 'Synced today' : 'Scheduled'}
                             </span>
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-slate-400 dark:text-gray-500 text-[11px] italic">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                            Not Synced Yet
-                          </span>
+                          <span className="text-[11px] text-slate-400 italic">Pending</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" asChild className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 hover:bg-cyan-500/10 cursor-pointer rounded-xl font-semibold">
-                            <Link href={`/dashboard/${acc.id}`} prefetch={true}>
-                              <Activity className="w-4 h-4 mr-2" />
-                              View Detail
-                            </Link>
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDisconnect(acc.id)}
-                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer rounded-xl font-semibold"
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/dashboard/${acc.id}`}
+                            prefetch={true}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Disconnect
-                          </Button>
+                            <span>Analytics</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDisconnect(acc.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title="Disconnect profile"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -408,8 +400,8 @@ export default function DashboardOverview() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

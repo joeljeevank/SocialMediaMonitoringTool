@@ -581,7 +581,7 @@ export default function YouTubeDashboardPage() {
                   setVideoPage(1);
                 }
               }}
-              className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-cyan-500/20 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
+              className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
               <option value="all" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
                 🌐 All Channels ({channels.length})
@@ -603,7 +603,7 @@ export default function YouTubeDashboardPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-cyan-500/20 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
+              className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
               <option value="7d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 7 Days</option>
               <option value="28d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 28 Days</option>
@@ -618,7 +618,7 @@ export default function YouTubeDashboardPage() {
             onClick={handleSync}
             disabled={syncing || channels.length === 0}
             variant="outline"
-            className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-cyan-500/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
+            className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing || isLiveRefreshing ? 'animate-spin text-red-500' : ''}`} />
             {syncing ? 'Syncing...' : isLiveRefreshing ? 'Updating...' : 'Sync Now'}
@@ -1410,7 +1410,7 @@ export default function YouTubeDashboardPage() {
 
       {/* Video Details Modal - High-Tech Widescreen Layout */}
       <Dialog open={selectedVideo !== null} onOpenChange={(open) => !open && setSelectedVideo(null)}>
-        <DialogContent className="max-w-4xl sm:max-w-4xl lg:max-w-5xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
+        <DialogContent className="max-w-4xl sm:max-w-4xl lg:max-w-5xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
           {selectedVideo && (
             <div className="space-y-6">
               {/* Header Bar */}
@@ -1434,7 +1434,7 @@ export default function YouTubeDashboardPage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left Col: Large HD Thumbnail Preview + 3 Stat Tiles + CTA */}
                 <div className="lg:col-span-5 space-y-4">
-                  <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-slate-200 dark:border-cyan-500/20 shadow-xl group">
+                  <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-slate-200 dark:border-slate-800 shadow-xl group">
                     {selectedVideo.thumbnailUrl && (
                       <img src={selectedVideo.thumbnailUrl} alt={selectedVideo.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     )}
@@ -1446,19 +1446,19 @@ export default function YouTubeDashboardPage() {
 
                   {/* 3 Metric Tiles Grid */}
                   <div className="grid grid-cols-3 gap-2.5">
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-cyan-500/20 text-center">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800 text-center">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Views</span>
                       <span className="font-black text-base text-cyan-600 dark:text-cyan-400">
                         {(selectedVideo.views || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-cyan-500/20 text-center">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800 text-center">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Likes</span>
                       <span className="font-black text-base text-pink-500 dark:text-pink-400">
                         {(selectedVideo.likes || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-cyan-500/20 text-center">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800 text-center">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Comments</span>
                       <span className="font-black text-base text-emerald-500 dark:text-emerald-400">
                         {(selectedVideo.comments || 0).toLocaleString()}
@@ -1512,7 +1512,7 @@ export default function YouTubeDashboardPage() {
 
       {/* Connect Channel / Setup Modal */}
       <Dialog open={showConnectModal} onOpenChange={setShowConnectModal}>
-        <DialogContent className="max-w-2xl sm:max-w-2xl lg:max-w-3xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <DialogContent className="max-w-2xl sm:max-w-2xl lg:max-w-3xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
