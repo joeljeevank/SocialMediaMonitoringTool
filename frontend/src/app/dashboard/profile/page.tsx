@@ -11,11 +11,8 @@ import {
   ArrowRight, 
   Settings,
   Users,
-  Activity,
   BarChart3,
-  FileText,
   CheckCircle2,
-  Zap,
   Globe,
   Lock,
   Eye,
@@ -136,22 +133,6 @@ export default function ProfileDashboard() {
       setPasswordLoading(false);
     }
   };
-
-  const totalFollowers = accounts.reduce((sum, a) => {
-    const sorted = a.analytics && a.analytics.length > 0 
-      ? [...a.analytics].sort((x, y) => new Date(x.lastCollectionTime || x.date).getTime() - new Date(y.lastCollectionTime || y.date).getTime())
-      : [];
-    const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
-    const count = (latest?.followers && latest.followers > 0)
-      ? latest.followers
-      : (sorted.slice().reverse().find(x => x.followers > 0)?.followers || 0);
-    return sum + count;
-  }, 0);
-
-  const totalPosts = accounts.reduce((sum, a) => {
-    const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
-    return sum + (latest?.recentPosts || 0);
-  }, 0);
 
   return (
     <div className="space-y-6">
@@ -313,73 +294,6 @@ export default function ProfileDashboard() {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
-      </div>
-
-      {/* Metric KPI Cards with Elegant Icon Badges */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Tracked Profiles</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
-            {accounts.length}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            LinkedIn profiles active
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Total Followers</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
-            {totalFollowers.toLocaleString()}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-            Across connected profiles
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Total Posts Scraped</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <FileText className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
-            {totalPosts.toLocaleString()}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-            Monitored post updates
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">System Health</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Zap className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
-            100%
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Collector engine active
-          </p>
         </div>
       </div>
 
