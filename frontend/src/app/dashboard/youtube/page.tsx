@@ -1573,7 +1573,7 @@ export default function YouTubeDashboardPage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleTrackChannel();
                         }}
-                        placeholder="e.g. @mkbhd, @veritasium, or https://youtube.com/@channel"
+                        placeholder="e.g. @mkbhd"
                         className="rounded-2xl pl-9 text-xs h-11 border-purple-200 dark:border-white/10 bg-slate-50 dark:bg-white/5"
                       />
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
