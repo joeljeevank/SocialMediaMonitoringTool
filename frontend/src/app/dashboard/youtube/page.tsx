@@ -36,7 +36,6 @@ import {
   Check,
   Sparkles,
   ShieldCheck,
-  ShieldAlert,
   Lock
 } from 'lucide-react';
 import { 
