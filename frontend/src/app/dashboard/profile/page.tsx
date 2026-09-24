@@ -227,18 +227,6 @@ export default function ProfileDashboard() {
                     </div>
                   </div>
 
-                  {/* Profile info preview */}
-                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/80 dark:border-slate-800 text-xs">
-                    <div>
-                      <span className="text-slate-400 text-[11px] block">User Name</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">{userDetails.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 text-[11px] block">Email</span>
-                      <span className="font-semibold text-slate-900 dark:text-white truncate block">{userDetails.email}</span>
-                    </div>
-                  </div>
-
                   {/* Password Change Form */}
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-1.5">

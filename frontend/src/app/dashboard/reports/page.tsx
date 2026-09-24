@@ -470,28 +470,28 @@ function ReportsContent() {
       {/* PLATFORM 1: LINKEDIN REPORT & EXPORT                                      */}
       {/* ========================================================================= */}
       {activePlatform === 'linkedin' && (
-        <Card className="bg-white/90 dark:bg-[#090d16]/80 border border-slate-200 dark:border-cyan-500/20 shadow-xl backdrop-blur-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="border-b border-slate-100 dark:border-white/5 pb-4">
+        <Card className="bg-white/90 dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#0077B5]/10 flex items-center justify-center text-[#0077B5] dark:text-cyan-400">
+              <CardTitle className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#0077B5]/10 flex items-center justify-center text-[#0077B5]">
                   <LinkedinIcon className="w-4 h-4" />
                 </div>
                 LinkedIn Report Generation
               </CardTitle>
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                {accounts.length} Connected Profiles
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {accounts.length} Profiles
               </span>
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wider">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Select LinkedIn Account
               </label>
               <div className="relative">
                 <select
-                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-cyan-500/40 text-slate-900 dark:text-white h-12 px-4 pr-10 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none appearance-none cursor-pointer transition-all shadow-sm font-medium text-sm"
+                  className="w-full bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-11 px-4 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer transition-all shadow-sm font-medium text-sm"
                   value={selectedAccountId}
                   onChange={(e) => handleFetchLinkedInData(e.target.value)}
                 >
