@@ -15,8 +15,14 @@ import {
   BarChart3, 
   AlertCircle, 
   Loader2, 
-  ArrowRight
+  ArrowRight,
+  Shield,
+  Zap,
+  KeyRound,
+  TrendingUp,
+  Globe
 } from 'lucide-react';
+import { YoutubeIcon } from '@/components/icons/youtube-icon';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,49 +87,55 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Top Navbar Utility */}
-      <div className="fixed top-5 right-5 z-20">
+      <div className="fixed top-5 right-5 z-20 flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 dark:bg-[#111827]/90 border border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-400 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Server Ready</span>
+        </div>
         <ThemeToggle />
       </div>
 
       <div className="w-full max-w-md">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/20 mb-3">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 mb-3">
             <BarChart3 className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             SocialMedia Monitoring
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Sign in to access your analytics dashboard
+            Sign in to access your social intelligence dashboard
           </p>
         </div>
 
         {/* Login Card */}
         <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm dark:shadow-xl">
-          {/* Role Switcher */}
+          {/* Role Switcher with Icons */}
           <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl mb-6">
             <button
               type="button"
               onClick={() => setDemoAccount('admin')}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 role === 'admin'
                   ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Administrator
+              <Shield className="w-3.5 h-3.5" />
+              <span>Administrator</span>
             </button>
             <button
               type="button"
               onClick={() => setDemoAccount('manager')}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 role === 'manager'
                   ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Manager
+              <User className="w-3.5 h-3.5" />
+              <span>Manager</span>
             </button>
           </div>
 
@@ -149,18 +161,16 @@ export default function LoginPage() {
                   placeholder="Enter username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10 h-11 bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700/80 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="pl-10 h-11 bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Password
-                </Label>
-              </div>
+              <Label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Password
+              </Label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <Input
@@ -169,7 +179,7 @@ export default function LoginPage() {
                   placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 h-11 bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700/80 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="pl-10 pr-10 h-11 bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                   required
                 />
                 <button
@@ -184,18 +194,19 @@ export default function LoginPage() {
             </div>
 
             {/* Quick Fill Demo Helpers */}
-            <div className="pt-1 pb-1">
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Demo credentials:</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDemoAccount('admin')}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-medium"
-                  >
-                    Admin (admin / admin123)
-                  </button>
-                </div>
+            <div className="pt-1 pb-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1">
+                <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Quick demo:</span>
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDemoAccount('admin')}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
+                >
+                  admin / admin123
+                </button>
               </div>
             </div>
 
@@ -211,17 +222,39 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Sign In to Dashboard</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </Button>
           </form>
 
-          {/* Security note */}
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-2 text-xs text-slate-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <span>Encrypted & Authorized Session</span>
+          {/* Security note with platform icons */}
+          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span>Secure Session</span>
+            </span>
+            <div className="flex items-center gap-2 text-slate-400">
+              <span className="w-5 h-5 rounded bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-[10px]">in</span>
+              <YoutubeIcon className="w-3.5 h-3.5 text-red-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Highlights beneath login */}
+        <div className="grid grid-cols-3 gap-2 mt-6 text-center text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
+            <TrendingUp className="w-4 h-4 text-indigo-500" />
+            <span>Live Scraping</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
+            <Zap className="w-4 h-4 text-amber-500" />
+            <span>Fast Pagination</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
+            <Globe className="w-4 h-4 text-blue-500" />
+            <span>Multi-Platform</span>
           </div>
         </div>
       </div>
