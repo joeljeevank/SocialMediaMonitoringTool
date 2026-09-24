@@ -18,7 +18,6 @@ import {
   ArrowRight,
   Shield,
   Zap,
-  KeyRound,
   TrendingUp,
   Globe
 } from 'lucide-react';
@@ -27,8 +26,8 @@ import { YoutubeIcon } from '@/components/icons/youtube-icon';
 export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState<'admin' | 'manager'>('admin');
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,18 +71,6 @@ export default function LoginPage() {
     }
   };
 
-  const setDemoAccount = (selectedRole: 'admin' | 'manager') => {
-    setRole(selectedRole);
-    setError('');
-    if (selectedRole === 'admin') {
-      setUsername('admin');
-      setPassword('admin123');
-    } else {
-      setUsername('manager');
-      setPassword('manager123');
-    }
-  };
-
   return (
     <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Top Navbar Utility */}
@@ -111,11 +98,14 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm dark:shadow-xl">
-          {/* Role Switcher with Icons */}
+          {/* Role Mode Selector */}
           <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl mb-6">
             <button
               type="button"
-              onClick={() => setDemoAccount('admin')}
+              onClick={() => {
+                setRole('admin');
+                setError('');
+              }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 role === 'admin'
                   ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-sm'
@@ -127,7 +117,10 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => setDemoAccount('manager')}
+              onClick={() => {
+                setRole('manager');
+                setError('');
+              }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 role === 'manager'
                   ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-sm'
@@ -151,14 +144,14 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Username / Email
+                Username or Email Address
               </Label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter username"
+                  placeholder="e.g. admin or manager"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 h-11 bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
@@ -169,14 +162,14 @@ export default function LoginPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Password
+                Account Password
               </Label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter password"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 h-11 bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
@@ -193,32 +186,15 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Quick Fill Demo Helpers */}
-            <div className="pt-1 pb-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1">
-                <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Quick demo:</span>
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDemoAccount('admin')}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
-                >
-                  admin / admin123
-                </button>
-              </div>
-            </div>
-
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
+              className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-3"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Signing in...</span>
+                  <span>Authenticating...</span>
                 </>
               ) : (
                 <>
