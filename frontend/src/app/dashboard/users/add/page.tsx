@@ -17,7 +17,7 @@ export default function AddUserPage() {
   const [managerCompanyRole, setManagerCompanyRole] = useState('');
   const [managerPhone, setManagerPhone] = useState('');
   const [managerEmail, setManagerEmail] = useState('');
-  const [managerRole, setManagerRole] = useState('user');
+  const [managerRole, setManagerRole] = useState('manager');
   const [managerAddLoading, setManagerAddLoading] = useState(false);
   const [managerSuccess, setManagerSuccess] = useState('');
   const [managerError, setManagerError] = useState('');
@@ -55,7 +55,7 @@ export default function AddUserPage() {
         setManagerCompanyRole('');
         setManagerPhone('');
         setManagerEmail('');
-        setManagerRole('user');
+        setManagerRole('manager');
       } else {
         const errorData = await res.json().catch(() => ({}));
         setManagerError(errorData.message || 'Failed to create user account.');
@@ -187,7 +187,6 @@ export default function AddUserPage() {
               onChange={(e) => setManagerRole(e.target.value)}
               className="w-full bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-10 px-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="user">User (Standard Access)</option>
               <option value="manager">Manager (Elevated Controls)</option>
               <option value="super_admin">Super Admin (Full Control)</option>
             </select>
