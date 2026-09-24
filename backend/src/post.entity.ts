@@ -1,5 +1,6 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Organization } from './organization.entity';
+import { Account } from './account.entity';
 
 @Entity()
 export class Post {
@@ -8,6 +9,12 @@ export class Post {
 
   @Column('text')
   content: string;
+
+  @Column({ nullable: true })
+  author: string;
+
+  @Column({ nullable: true })
+  postDate: string;
 
   @Column({ nullable: true })
   postUrl: string;
@@ -30,6 +37,14 @@ export class Post {
   @Column({ nullable: true })
   unavailableMetrics: string;
 
-  @ManyToOne(() => Organization, org => org.posts)
+  @Column({ nullable: true })
+  accountId: number;
+
+  @ManyToOne(() => Account, account => account.posts, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'accountId' })
+  account: Account;
+
+  @ManyToOne(() => Organization, org => org.posts, { nullable: true })
   organization: Organization;
 }
+

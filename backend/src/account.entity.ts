@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Analytics } from './analytics.entity';
 import { Organization } from './organization.entity';
+import { Post } from './post.entity';
 
 @Entity()
 export class Account {
@@ -27,4 +28,8 @@ export class Account {
 
   @OneToMany(() => Organization, org => org.admin)
   organizations: Organization[];
+
+  @OneToMany(() => Post, post => post.account)
+  posts: Post[];
 }
+

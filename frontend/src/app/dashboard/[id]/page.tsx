@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, 
   ThumbsUp, 
@@ -18,7 +19,11 @@ import {
   RefreshCw, 
   CheckCircle2, 
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import axios from 'axios';
@@ -156,6 +161,53 @@ export default function AnalyticsPage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [sessionSynced, setSessionSynced] = useState(false);
 
+  // Database Posts & Explorer Controls State
+  const [posts, setPosts] = useState<any[]>([]);
+  const [totalPosts, setTotalPosts] = useState<number>(0);
+  const [postPage, setPostPage] = useState<number>(1);
+  const [postTotalPages, setPostTotalPages] = useState<number>(1);
+  const [postSearch, setPostSearch] = useState<string>('');
+  const [postSort, setPostSort] = useState<string>('createdAt');
+  const [postOrder, setPostOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [postsLoading, setPostsLoading] = useState<boolean>(false);
+
+  // Fetch Stored Posts from PostgreSQL Database
+  const fetchPosts = useCallback(async () => {
+    if (!id) return;
+    setPostsLoading(true);
+    try {
+      const res = await axios.get(`http://localhost:3001/api/linkedin/posts`, {
+        params: {
+          accountId: id,
+          search: postSearch,
+          sort: postSort,
+          order: postOrder,
+          page: postPage,
+          limit: 10,
+        },
+      });
+      if (res.data && Array.isArray(res.data.items)) {
+        const mapped = res.data.items.map((p: any) => ({
+          ...p,
+          postDate: getRealtimePostDate(p.postUrl, p.postDate || p.createdAt),
+          impressions: p.impressions ?? p.views ?? 0,
+          views: p.views ?? p.impressions ?? 0,
+        }));
+        setPosts(mapped);
+        setTotalPosts(res.data.total || 0);
+        setPostTotalPages(res.data.totalPages || 1);
+      }
+    } catch (e) {
+      console.error('Failed to fetch posts from API', e);
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [id, postSearch, postSort, postOrder, postPage]);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
   // Load cached scraped data on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && id) {
@@ -215,6 +267,17 @@ export default function AnalyticsPage() {
   }
 
   const latest = data[data.length - 1];
+
+  // Derive the effective followers count:
+  // 1. From latest record if > 0
+  // 2. From scrapedData if > 0
+  // 3. Fallback to reverse search in data history for any non-zero follower count
+  const effectiveFollowers = 
+    (latest?.followers && latest.followers > 0)
+      ? latest.followers
+      : (scrapedData?.followers && scrapedData.followers > 0)
+        ? scrapedData.followers
+        : ([...data].reverse().find(d => d.followers > 0)?.followers || 0);
 
   // Derive the effective last collection timestamp:
   // 1. From recently scraped data
@@ -294,9 +357,10 @@ export default function AnalyticsPage() {
         if (typeof window !== 'undefined') {
           localStorage.setItem(`scraped_data_${id}`, JSON.stringify(result.data));
         }
-        // Refresh analytics to get the newly inserted row
+        // Refresh analytics and all posts
         const aRes = await axios.get(`http://localhost:3001/analytics/${id}`);
         setData(aRes.data);
+        fetchPosts();
         
         setCollectionSuccessMsg('Data successfully collected and synchronized from LinkedIn!');
         setTimeout(() => setCollectionSuccessMsg(null), 9000);
@@ -464,22 +528,69 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Latest Scraped Posts Table (if scrapedData is present) - Curved 3xl */}
-      {scrapedData && (
+      {/* Published LinkedIn Posts Table & Explorer */}
+      {(scrapedData || posts.length > 0 || totalPosts > 0) && (
         <Card className="glass border border-purple-200 dark:border-purple-500/30 shadow-xl overflow-hidden rounded-3xl">
           <CardHeader className="p-6 pb-4">
-            <div>
-              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                Latest Scraped LinkedIn Posts & Engagement
-              </CardTitle>
-              <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
-                Posts collected directly from the profile's recent activity feed
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  All Published LinkedIn Posts & Engagement
+                </CardTitle>
+                <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                  Showing {posts.length > 0 ? posts.length : (scrapedData?.posts?.length || 0)} of {totalPosts || scrapedData?.posts?.length || 0} posts collected from the profile activity stream
+                </p>
+              </div>
+
+              {/* Post Controls: Search, Sort */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="Search posts..."
+                    value={postSearch}
+                    onChange={(e) => {
+                      setPostSearch(e.target.value);
+                      setPostPage(1);
+                    }}
+                    className="rounded-full pl-9 pr-4 py-1.5 text-xs h-9 bg-slate-100 dark:bg-white/5 border-purple-200 dark:border-white/10 w-44 sm:w-56 focus-visible:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={postSort}
+                    onChange={(e) => {
+                      setPostSort(e.target.value);
+                      setPostPage(1);
+                    }}
+                    className="rounded-full px-3.5 py-1.5 text-xs h-9 bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-white/10 text-slate-900 dark:text-white font-medium appearance-none pr-8 cursor-pointer"
+                  >
+                    <option value="createdAt" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Latest Published</option>
+                    <option value="impressions" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Impressions</option>
+                    <option value="likes" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Reactions</option>
+                    <option value="comments" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Comments</option>
+                  </select>
+                  <ArrowUpDown className="w-3 h-3 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPostOrder(postOrder === 'ASC' ? 'DESC' : 'ASC')}
+                  className="h-9 px-3 rounded-full text-xs font-semibold"
+                  title={`Sort ${postOrder === 'ASC' ? 'Descending' : 'Ascending'}`}
+                >
+                  {postOrder === 'ASC' ? '▲ Asc' : '▼ Desc'}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           
           <CardContent className="p-6 pt-0">
-            {scrapedData.unavailable && scrapedData.unavailable.length > 0 && (
+            {scrapedData?.unavailable && scrapedData.unavailable.length > 0 && (
               <div className="mb-4 text-xs bg-slate-100 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-300">
                 <strong className="text-slate-800 dark:text-white">Note on metrics:</strong> Direct public profile scraping extracts likes, comments, and post counts. Unavailable metrics for this view: {scrapedData.unavailable.join(', ')}.
               </div>
@@ -499,15 +610,15 @@ export default function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-purple-100 dark:divide-white/5">
-                  {(!scrapedData.posts || scrapedData.posts.length === 0) ? (
+                  {((posts.length === 0 && !scrapedData?.posts) || (posts.length === 0 && scrapedData?.posts?.length === 0)) ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-slate-500 dark:text-gray-400">
-                        No recent posts were extracted during the collection.
+                        {postsLoading ? 'Loading posts...' : 'No posts found. Click "Collect LinkedIn Data" to fetch all available posts.'}
                       </td>
                     </tr>
                   ) : (
-                    scrapedData.posts.map((post: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-purple-500/5 transition-colors">
+                    (posts.length > 0 ? posts : (scrapedData?.posts || [])).map((post: any, idx: number) => (
+                      <tr key={post.id || idx} className="hover:bg-purple-500/5 transition-colors">
                         <td className="py-3.5 px-5 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
                           {cleanAuthor(post.author)}
                         </td>
@@ -520,7 +631,7 @@ export default function AnalyticsPage() {
                               {post.content.length > 100 && (
                                 <button
                                   type="button"
-                                  onClick={() => setActiveModal('Recent Posts')}
+                                  onClick={() => setActiveModal('All Posts')}
                                   className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold inline-block"
                                 >
                                   View full text →
@@ -581,6 +692,35 @@ export default function AnalyticsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {postTotalPages > 1 && (
+              <div className="flex items-center justify-between px-2 pt-4">
+                <span className="text-xs text-slate-500 dark:text-gray-400">
+                  Page {postPage} of {postTotalPages} ({totalPosts} posts)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={postPage <= 1 || postsLoading}
+                    onClick={() => setPostPage((p) => Math.max(1, p - 1))}
+                    className="h-8 px-3 rounded-full text-xs font-semibold"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={postPage >= postTotalPages || postsLoading}
+                    onClick={() => setPostPage((p) => Math.min(postTotalPages, p + 1))}
+                    className="h-8 px-3 rounded-full text-xs font-semibold"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -609,12 +749,12 @@ export default function AnalyticsPage() {
                 </div>
               )}
               
-              {scrapedData.posts
+              {(posts.length > 0 ? posts : (scrapedData?.posts || []))
                 .filter((p: any) => {
                    if (activeModal === 'Comments') return (p.comments ?? 0) > 0;
                    if (activeModal === 'Likes') return (p.likes ?? 0) > 0;
                    if (activeModal === 'Views') return true;
-                   if (activeModal === 'Recent Posts') return true;
+                   if (activeModal === 'All Posts' || activeModal === 'Recent Posts') return true;
                    return false;
                 })
                 .map((post: any, idx: number) => (
@@ -691,12 +831,12 @@ export default function AnalyticsPage() {
       {/* KPI Cards - Smooth 3xl Curved Cards with Curved Inner Icons */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Followers', value: latest.followers ?? 0, icon: Users, color: 'text-blue-500' },
+          { label: 'Followers', value: effectiveFollowers, icon: Users, color: 'text-blue-500' },
           { label: 'Views', value: latest.views ?? 0, icon: Eye, color: 'text-indigo-500' },
           { label: 'Likes', value: latest.likes ?? 0, icon: ThumbsUp, color: 'text-pink-500' },
           { label: 'Comments', value: latest.comments ?? 0, icon: MessageCircle, color: 'text-emerald-500' },
           { label: 'Shares', value: latest.shares ?? 0, icon: Share2, color: 'text-orange-500' },
-          { label: 'Recent Posts', value: latest.recentPosts ?? 0, icon: FileText, color: 'text-purple-600 dark:text-purple-400' },
+          { label: 'All Posts', value: totalPosts || scrapedData?.posts?.length || latest.recentPosts || 0, icon: FileText, color: 'text-purple-600 dark:text-purple-400' },
         ].map((stat, i) => (
           <Card 
             key={i} 

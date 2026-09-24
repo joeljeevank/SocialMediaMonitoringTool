@@ -226,8 +226,14 @@ export default function DashboardOverview() {
           <CardContent className="px-5 pb-5 pt-1">
             <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
               {accounts.reduce((sum, a) => {
-                const latest = a.analytics && a.analytics.length > 0 ? a.analytics[a.analytics.length - 1] : null;
-                return sum + (latest?.followers || 0);
+                const sorted = a.analytics && a.analytics.length > 0 
+                  ? [...a.analytics].sort((x, y) => new Date(x.lastCollectionTime || x.date).getTime() - new Date(y.lastCollectionTime || y.date).getTime())
+                  : [];
+                const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+                const count = (latest?.followers && latest.followers > 0)
+                  ? latest.followers
+                  : (sorted.slice().reverse().find(x => x.followers > 0)?.followers || 0);
+                return sum + count;
               }, 0).toLocaleString()}
             </div>
             <p className="text-[11px] text-slate-500 dark:text-gray-400 mt-0.5">Across monitored profiles</p>
@@ -272,7 +278,7 @@ export default function DashboardOverview() {
                 <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Views</TableHead>
                 <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Likes</TableHead>
                 <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Comments</TableHead>
-                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Recent Posts</TableHead>
+                <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Posts</TableHead>
                 <TableHead className="text-slate-700 dark:text-cyan-300 font-bold">Last Synchronized</TableHead>
                 <TableHead className="text-right text-slate-700 dark:text-cyan-300 font-bold">Actions</TableHead>
               </TableRow>
@@ -308,6 +314,10 @@ export default function DashboardOverview() {
                     ? sortedAnalytics[sortedAnalytics.length - 1] 
                     : null;
                   
+                  const effectiveFollowers = (latestAnalytics?.followers && latestAnalytics.followers > 0)
+                    ? latestAnalytics.followers
+                    : (sortedAnalytics.slice().reverse().find(x => x.followers > 0)?.followers || 0);
+
                   return (
                     <TableRow key={acc.id} className="border-b border-slate-200 dark:border-white/5 hover:bg-cyan-500/5 transition-colors">
                       <TableCell className="font-medium text-slate-900 dark:text-white flex flex-col gap-1">
@@ -334,7 +344,7 @@ export default function DashboardOverview() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-700 dark:text-gray-200 font-bold">{latestAnalytics ? (latestAnalytics.followers ?? 0).toLocaleString() : '-'}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-gray-200 font-bold">{latestAnalytics ? effectiveFollowers.toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.views ?? 0).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.likes ?? 0).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-slate-600 dark:text-gray-300">{latestAnalytics ? (latestAnalytics.comments ?? 0).toLocaleString() : '-'}</TableCell>

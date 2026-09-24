@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, ILike } from 'typeorm';
+import { Repository, Between, ILike, IsNull } from 'typeorm';
 import { google } from 'googleapis';
 import { YouTubeChannel } from './youtube-channel.entity';
 import { YouTubeVideo } from './youtube-video.entity';
@@ -28,8 +28,41 @@ function parseDuration(isoDuration?: string | null): string {
 }
 
 @Injectable()
-export class YoutubeService {
+export class YoutubeService implements OnModuleInit {
   private readonly logger = new Logger(YoutubeService.name);
+
+  async onModuleInit() {
+    try {
+      await this.repairOrphanedVideos();
+    } catch (e: any) {
+      this.logger.warn(`Startup video repair check failed: ${e.message}`);
+    }
+  }
+
+  async repairOrphanedVideos(): Promise<void> {
+    const orphaned = await this.videoRepo.find({
+      where: [{ channelId: IsNull() }, { channel: IsNull() }],
+    });
+    if (orphaned.length === 0) return;
+
+    this.logger.log(`Found ${orphaned.length} orphaned videos. Repairing channel associations...`);
+    const channels = await this.channelRepo.find();
+    for (const ch of channels) {
+      const playlistId = ch.uploadsPlaylistId || (ch.channelId.startsWith('UC') ? 'UU' + ch.channelId.slice(2) : null);
+      if (playlistId) {
+        try {
+          ch.uploadsPlaylistId = playlistId;
+          const auth = (ch.accessToken || ch.refreshToken) ? await this.getAuthenticatedClient(ch) : process.env.YOUTUBE_API_KEY;
+          if (auth) {
+            const yt = google.youtube({ version: 'v3', auth });
+            await this.syncVideosWithApiKey(ch, yt);
+          }
+        } catch (e: any) {
+          this.logger.warn(`Could not repair videos for ${ch.title}: ${e.message}`);
+        }
+      }
+    }
+  }
 
   constructor(
     @InjectRepository(YouTubeChannel)
@@ -417,7 +450,11 @@ export class YoutubeService {
     return {
       success: true,
       message: `Channel "${channel.title}" tracked successfully!`,
-      channel: safeChannel,
+      channel: {
+        ...safeChannel,
+        isOAuth: false,
+        authType: 'identifier',
+      },
     };
   }
 
@@ -456,6 +493,8 @@ export class YoutubeService {
           video.views = viewCount;
           video.likes = likeCount;
           video.comments = commentCount;
+          video.channel = channel;
+          video.channelId = channel.id;
           await this.videoRepo.save(video);
         } else {
           video = this.videoRepo.create({
@@ -469,6 +508,7 @@ export class YoutubeService {
             likes: likeCount,
             comments: commentCount,
             channel: channel,
+            channelId: channel.id,
           });
           await this.videoRepo.save(video);
         }
@@ -540,7 +580,11 @@ export class YoutubeService {
       return {
         success: true,
         message: `Channel "${channel.title}" tracked successfully! For full video analytics, enter a YouTube API Key.`,
-        channel: safeChannel,
+        channel: {
+          ...safeChannel,
+          isOAuth: false,
+          authType: 'identifier',
+        },
       };
     } catch (e: any) {
       throw new BadRequestException(
@@ -561,6 +605,8 @@ export class YoutubeService {
     const youtubeAnalytics = google.youtubeAnalytics({ version: 'v2', auth: authClient });
 
     // 1. Sync Channel Information (1 unit quota)
+    const prevSubCount = Number(channel.subscribers || 0);
+    let subDiff = 0;
     try {
       const channelRes = await youtube.channels.list({
         part: ['snippet', 'contentDetails', 'statistics'],
@@ -569,11 +615,13 @@ export class YoutubeService {
 
       if (channelRes.data.items && channelRes.data.items.length > 0) {
         const item = channelRes.data.items[0];
+        const newSubCount = Number(item.statistics?.subscriberCount || channel.subscribers);
+        subDiff = newSubCount - prevSubCount;
         channel.title = item.snippet?.title || channel.title;
         channel.description = item.snippet?.description || channel.description;
         channel.customUrl = item.snippet?.customUrl || channel.customUrl;
         channel.thumbnailUrl = item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || channel.thumbnailUrl;
-        channel.subscribers = Number(item.statistics?.subscriberCount || channel.subscribers);
+        channel.subscribers = newSubCount;
         channel.totalViews = String(item.statistics?.viewCount || channel.totalViews);
         channel.totalVideos = Number(item.statistics?.videoCount || channel.totalVideos);
         channel.uploadsPlaylistId = item.contentDetails?.relatedPlaylists?.uploads || channel.uploadsPlaylistId;
@@ -662,6 +710,9 @@ export class YoutubeService {
     channel.status = 'Connected';
     const saved = await this.channelRepo.save(channel);
 
+    // 4. Synthesize & Update Real-Time Live Analytics for Today & Recent Days
+    await this.ensureRealtimeDailyAnalytics(saved, subDiff);
+
     const { accessToken, refreshToken, ...safeChannel } = saved;
     return {
       success: true,
@@ -685,6 +736,7 @@ export class YoutubeService {
     }
 
     const apiKey = process.env.YOUTUBE_API_KEY;
+    let subDiff = 0;
     if (apiKey) {
       const youtube = google.youtube({ version: 'v3', auth: apiKey });
       try {
@@ -694,11 +746,14 @@ export class YoutubeService {
         });
         if (channelRes.data.items && channelRes.data.items.length > 0) {
           const item = channelRes.data.items[0];
+          const prevSubCount = Number(channel.subscribers || 0);
+          const newSubCount = Number(item.statistics?.subscriberCount || channel.subscribers);
+          subDiff = newSubCount - prevSubCount;
           channel.title = item.snippet?.title || channel.title;
           channel.description = item.snippet?.description || channel.description;
           channel.customUrl = item.snippet?.customUrl || channel.customUrl;
           channel.thumbnailUrl = item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || channel.thumbnailUrl;
-          channel.subscribers = Number(item.statistics?.subscriberCount || channel.subscribers);
+          channel.subscribers = newSubCount;
           channel.totalViews = String(item.statistics?.viewCount || channel.totalViews);
           channel.totalVideos = Number(item.statistics?.videoCount || channel.totalVideos);
           channel.uploadsPlaylistId = item.contentDetails?.relatedPlaylists?.uploads || channel.uploadsPlaylistId;
@@ -714,6 +769,9 @@ export class YoutubeService {
     channel.lastSyncedAt = new Date().toISOString();
     channel.status = 'Connected';
     const saved = await this.channelRepo.save(channel);
+
+    await this.ensureRealtimeDailyAnalytics(saved, subDiff);
+
     const { accessToken, refreshToken, ...safeChannel } = saved;
     return {
       success: true,
@@ -736,12 +794,28 @@ export class YoutubeService {
     return { success: true, syncedCount: count };
   }
 
+  isChannelOAuth(c: any): boolean {
+    if (!c) return false;
+    return Boolean(
+      (c.accessToken && String(c.accessToken).trim()) ||
+      (c.refreshToken && String(c.refreshToken).trim()) ||
+      (c.googleAccountEmail && String(c.googleAccountEmail).trim())
+    );
+  }
+
   async getChannels(): Promise<any[]> {
     const channels = await this.channelRepo.find({
       order: { createdAt: 'DESC' },
     });
-    // Sanitize secret tokens before sending to frontend
-    return channels.map(({ accessToken, refreshToken, ...rest }) => rest);
+    // Sanitize secret tokens before sending to frontend, and include authType & isOAuth
+    return channels.map(({ accessToken, refreshToken, ...rest }) => {
+      const isOAuth = this.isChannelOAuth({ accessToken, refreshToken, ...rest });
+      return {
+        ...rest,
+        isOAuth,
+        authType: isOAuth ? 'oauth' : 'identifier',
+      };
+    });
   }
 
   async getChannel(id: number): Promise<any> {
@@ -753,7 +827,12 @@ export class YoutubeService {
       throw new NotFoundException('Channel not found');
     }
     const { accessToken, refreshToken, ...rest } = channel;
-    return rest;
+    const isOAuth = this.isChannelOAuth(channel);
+    return {
+      ...rest,
+      isOAuth,
+      authType: isOAuth ? 'oauth' : 'identifier',
+    };
   }
 
   async disconnectChannel(id: number): Promise<{ success: boolean; message: string }> {
@@ -781,6 +860,190 @@ export class YoutubeService {
     return { startDate, endDate };
   }
 
+  async refreshLiveChannelStats(channel: YouTubeChannel): Promise<void> {
+    // Only refresh if lastSyncedAt was more than 30 seconds ago to prevent rate limits
+    if (channel.lastSyncedAt && Date.now() - new Date(channel.lastSyncedAt).getTime() < 30000) {
+      return;
+    }
+    try {
+      if (channel.accessToken || channel.refreshToken) {
+        const authClient = await this.getAuthenticatedClient(channel);
+        const youtube = google.youtube({ version: 'v3', auth: authClient });
+        const res = await youtube.channels.list({
+          part: ['statistics', 'snippet', 'contentDetails'],
+          id: [channel.channelId],
+        });
+        if (res.data.items && res.data.items.length > 0) {
+          const item = res.data.items[0];
+          const prevSubCount = Number(channel.subscribers || 0);
+          const newSubCount = Number(item.statistics?.subscriberCount || channel.subscribers);
+          const subDiff = newSubCount - prevSubCount;
+          channel.subscribers = newSubCount;
+          channel.totalViews = String(item.statistics?.viewCount || channel.totalViews);
+          channel.totalVideos = Number(item.statistics?.videoCount || channel.totalVideos);
+          channel.lastSyncedAt = new Date().toISOString();
+          await this.channelRepo.save(channel);
+          await this.ensureRealtimeDailyAnalytics(channel, subDiff);
+        }
+      } else if (process.env.YOUTUBE_API_KEY) {
+        const youtube = google.youtube({ version: 'v3', auth: process.env.YOUTUBE_API_KEY });
+        const res = await youtube.channels.list({
+          part: ['statistics', 'snippet'],
+          id: [channel.channelId],
+        });
+        if (res.data.items && res.data.items.length > 0) {
+          const item = res.data.items[0];
+          const prevSubCount = Number(channel.subscribers || 0);
+          const newSubCount = Number(item.statistics?.subscriberCount || channel.subscribers);
+          const subDiff = newSubCount - prevSubCount;
+          channel.subscribers = newSubCount;
+          channel.totalViews = String(item.statistics?.viewCount || channel.totalViews);
+          channel.totalVideos = Number(item.statistics?.videoCount || channel.totalVideos);
+          channel.lastSyncedAt = new Date().toISOString();
+          await this.channelRepo.save(channel);
+          await this.ensureRealtimeDailyAnalytics(channel, subDiff);
+        }
+      }
+    } catch (e: any) {
+      this.logger.warn(`Live channel stats refresh failed for ${channel.title}: ${e.message}`);
+    }
+  }
+
+  async ensureRealtimeDailyAnalytics(channel: YouTubeChannel, subDiff = 0): Promise<void> {
+    const isOAuth = this.isChannelOAuth(channel);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Aggregate live metrics from channel videos
+    const videos = await this.videoRepo.find({
+      where: { channel: { id: channel.id } },
+    });
+    let liveLikes = 0;
+    let liveComments = 0;
+    let liveVideoViews = 0;
+    for (const v of videos) {
+      liveLikes += Number(v.likes || 0);
+      liveComments += Number(v.comments || 0);
+      liveVideoViews += Number(v.views || 0);
+    }
+
+    // If NOT OAuth, do NOT forge historical filler rows or fake subscriber gains
+    if (!isOAuth) {
+      // For identifier channels, only track real live deltas detected during active monitoring
+      let todayRecord = await this.analyticsRepo.findOne({
+        where: { channel: { id: channel.id }, date: todayStr },
+      });
+
+      const todayGained = subDiff > 0 ? subDiff : 0;
+      const todayLost = subDiff < 0 ? Math.abs(subDiff) : 0;
+
+      if (todayRecord) {
+        if (todayGained > 0) todayRecord.subscribersGained += todayGained;
+        if (todayLost > 0) todayRecord.subscribersLost += todayLost;
+        todayRecord.likes = liveLikes;
+        todayRecord.comments = liveComments;
+        if (liveVideoViews > todayRecord.views) {
+          todayRecord.views = liveVideoViews;
+        }
+        await this.analyticsRepo.save(todayRecord);
+      } else if (subDiff !== 0 || liveVideoViews > 0) {
+        todayRecord = this.analyticsRepo.create({
+          date: todayStr,
+          views: liveVideoViews,
+          watchTimeMinutes: 0,
+          averageViewDurationSeconds: 0,
+          likes: liveLikes,
+          comments: liveComments,
+          shares: 0,
+          subscribersGained: todayGained,
+          subscribersLost: todayLost,
+          channel,
+        });
+        await this.analyticsRepo.save(todayRecord);
+      }
+      return;
+    }
+
+    // For OAuth channels:
+    // Check historical sum of subscribers gained
+    const historicalStats = await this.analyticsRepo
+      .createQueryBuilder('a')
+      .where('a.channelId = :cId AND a.date != :today', { cId: channel.id, today: todayStr })
+      .select('SUM(a.subscribersGained)', 'sumGained')
+      .addSelect('MAX(a.date)', 'lastDate')
+      .getRawOne();
+
+    const sumHistoricalGained = Number(historicalStats?.sumGained || 0);
+    const lastReportDate = historicalStats?.lastDate;
+
+    // Fill missing intermediate days between lastReportDate and today
+    if (lastReportDate) {
+      const lastD = new Date(lastReportDate);
+      const currD = new Date(lastD.getTime() + 24 * 60 * 60 * 1000);
+      const todayD = new Date(todayStr);
+
+      while (currD < todayD) {
+        const intermediateDateStr = currD.toISOString().split('T')[0];
+        let intermediateRow = await this.analyticsRepo.findOne({
+          where: { channel: { id: channel.id }, date: intermediateDateStr },
+        });
+        if (!intermediateRow) {
+          intermediateRow = this.analyticsRepo.create({
+            date: intermediateDateStr,
+            views: 0,
+            watchTimeMinutes: 0,
+            averageViewDurationSeconds: 0,
+            likes: liveLikes,
+            comments: liveComments,
+            shares: 0,
+            subscribersGained: 0,
+            subscribersLost: 0,
+            channel,
+          });
+          await this.analyticsRepo.save(intermediateRow);
+        }
+        currD.setDate(currD.getDate() + 1);
+      }
+    }
+
+    // Now handle TODAY's real-time live record
+    let todayRecord = await this.analyticsRepo.findOne({
+      where: { channel: { id: channel.id }, date: todayStr },
+    });
+
+    const todayGained = subDiff > 0 ? subDiff : 0;
+    const todayLost = subDiff < 0 ? Math.abs(subDiff) : 0;
+
+    if (todayRecord) {
+      if (todayGained > 0) {
+        todayRecord.subscribersGained += todayGained;
+      }
+      if (todayLost > 0) {
+        todayRecord.subscribersLost += todayLost;
+      }
+      todayRecord.likes = liveLikes > 0 ? liveLikes : todayRecord.likes;
+      todayRecord.comments = liveComments > 0 ? liveComments : todayRecord.comments;
+      if (liveVideoViews > todayRecord.views) {
+        todayRecord.views = liveVideoViews;
+      }
+      await this.analyticsRepo.save(todayRecord);
+    } else {
+      todayRecord = this.analyticsRepo.create({
+        date: todayStr,
+        views: liveVideoViews,
+        watchTimeMinutes: 0,
+        averageViewDurationSeconds: 0,
+        likes: liveLikes,
+        comments: liveComments,
+        shares: 0,
+        subscribersGained: todayGained,
+        subscribersLost: todayLost,
+        channel,
+      });
+      await this.analyticsRepo.save(todayRecord);
+    }
+  }
+
   async getOverview(channelId?: string, range?: string): Promise<any> {
     const channels = await this.channelRepo.find({
       relations: { videos: true },
@@ -791,6 +1054,18 @@ export class YoutubeService {
 
     if (targetChannels.length === 0 && !isAll) {
       throw new NotFoundException('Selected channel not found');
+    }
+
+    // Determine OAuth status & permissions
+    const anyOAuth = targetChannels.some((c) => this.isChannelOAuth(c));
+    const allOAuth = targetChannels.length > 0 && targetChannels.every((c) => this.isChannelOAuth(c));
+    const hasAnalyticsAccess = anyOAuth;
+    const authType = allOAuth ? 'oauth' : anyOAuth ? 'mixed' : 'identifier';
+
+    // Refresh live stats & ensure real-time analytics
+    for (const c of targetChannels) {
+      await this.refreshLiveChannelStats(c);
+      await this.ensureRealtimeDailyAnalytics(c);
     }
 
     // Baseline Totals from Channel Stats
@@ -817,6 +1092,7 @@ export class YoutubeService {
     const rawAggregates = await query
       .select('SUM(analytics.views)', 'views')
       .addSelect('SUM(analytics.watchTimeMinutes)', 'watchTimeMinutes')
+      .addSelect('AVG(analytics.averageViewDurationSeconds)', 'averageViewDurationSeconds')
       .addSelect('SUM(analytics.likes)', 'likes')
       .addSelect('SUM(analytics.comments)', 'comments')
       .addSelect('SUM(analytics.shares)', 'shares')
@@ -827,6 +1103,7 @@ export class YoutubeService {
     const rangeViews = Number(rawAggregates?.views || 0);
     const watchTimeMinutes = Number(rawAggregates?.watchTimeMinutes || 0);
     const watchTimeHours = Math.round((watchTimeMinutes / 60) * 10) / 10;
+    const averageViewDurationSeconds = Math.round(Number(rawAggregates?.averageViewDurationSeconds || 0));
     const likes = Number(rawAggregates?.likes || 0);
     const comments = Number(rawAggregates?.comments || 0);
     const shares = Number(rawAggregates?.shares || 0);
@@ -850,20 +1127,32 @@ export class YoutubeService {
     return {
       channelId: isAll ? 'all' : targetChannels[0].id,
       channelTitle: isAll ? 'All Connected Channels' : targetChannels[0].title,
+      authType,
+      hasAnalyticsAccess,
+      isOAuth: anyOAuth,
       subscribers: totalSubscribers,
       totalViews: totalViewsNum > 0 ? totalViewsNum : totalStoredVideoViews,
       totalVideos: totalVideos,
-      periodViews: rangeViews > 0 ? rangeViews : totalStoredVideoViews,
-      watchTimeHours: watchTimeHours,
-      watchTimeMinutes: watchTimeMinutes,
+      periodViews: hasAnalyticsAccess && rangeViews > 0 ? rangeViews : (totalViewsNum > 0 ? totalViewsNum : totalStoredVideoViews),
+      // If no OAuth access, DO NOT show fake 0 watch time, fake churn, or fake shares:
+      watchTimeHours: hasAnalyticsAccess ? watchTimeHours : null,
+      watchTimeMinutes: hasAnalyticsAccess ? watchTimeMinutes : null,
+      averageViewDurationSeconds: hasAnalyticsAccess ? averageViewDurationSeconds : null,
       likes: likes > 0 ? likes : totalStoredVideoLikes,
       comments: comments > 0 ? comments : totalStoredVideoComments,
-      shares: shares,
-      subscribersGained: subscribersGained,
-      subscribersLost: subscribersLost,
-      netSubscribers: netSubscribers,
+      shares: hasAnalyticsAccess ? shares : null,
+      subscribersGained: hasAnalyticsAccess ? subscribersGained : null,
+      subscribersLost: hasAnalyticsAccess ? subscribersLost : null,
+      netSubscribers: hasAnalyticsAccess ? netSubscribers : null,
       connectedChannelsCount: channels.length,
-      channels: targetChannels.map(({ accessToken, refreshToken, ...rest }) => rest),
+      channels: targetChannels.map(({ accessToken, refreshToken, ...rest }) => {
+        const isOAuth = this.isChannelOAuth({ accessToken, refreshToken, ...rest });
+        return {
+          ...rest,
+          isOAuth,
+          authType: isOAuth ? 'oauth' : 'identifier',
+        };
+      }),
     };
   }
 
@@ -871,11 +1160,20 @@ export class YoutubeService {
     const { startDate, endDate } = this.getDateRangeThreshold(range);
     const isAll = !channelId || channelId === 'all';
 
+    const channels = await this.channelRepo.find({ relations: { videos: true } });
+    const targetChannels = isAll ? channels : channels.filter((c) => String(c.id) === String(channelId) || c.channelId === channelId);
+
+    const anyOAuth = targetChannels.some((c) => this.isChannelOAuth(c));
+
+    for (const c of targetChannels) {
+      await this.ensureRealtimeDailyAnalytics(c);
+    }
+
     const query = this.analyticsRepo.createQueryBuilder('analytics')
       .where('analytics.date BETWEEN :startDate AND :endDate', { startDate, endDate });
 
-    if (!isAll) {
-      query.andWhere('analytics.channelId = :targetId', { targetId: Number(channelId) });
+    if (!isAll && targetChannels.length > 0) {
+      query.andWhere('analytics.channelId = :targetId', { targetId: targetChannels[0].id });
     }
 
     const rows = await query
@@ -892,24 +1190,65 @@ export class YoutubeService {
       .orderBy('analytics.date', 'ASC')
       .getRawMany();
 
-    return rows.map((r) => {
+    // If there are NO rows at all and channel has no OAuth access, return empty list (no fake filler)
+    if (rows.length === 0 && !anyOAuth) {
+      return [];
+    }
+
+    const rowMap = new Map<string, any>();
+    for (const r of rows) {
       const gained = Number(r.subscribersGained || 0);
       const lost = Number(r.subscribersLost || 0);
       const wtMins = Number(r.watchTimeMinutes || 0);
-      return {
+      rowMap.set(r.date, {
         date: r.date,
         views: Number(r.views || 0),
-        watchTimeMinutes: wtMins,
-        watchTimeHours: Math.round((wtMins / 60) * 10) / 10,
-        averageViewDurationSeconds: Math.round(Number(r.averageViewDurationSeconds || 0)),
+        watchTimeMinutes: anyOAuth ? wtMins : null,
+        watchTimeHours: anyOAuth ? Math.round((wtMins / 60) * 10) / 10 : null,
+        averageViewDurationSeconds: anyOAuth ? Math.round(Number(r.averageViewDurationSeconds || 0)) : null,
         likes: Number(r.likes || 0),
         comments: Number(r.comments || 0),
-        shares: Number(r.shares || 0),
-        subscribersGained: gained,
-        subscribersLost: lost,
-        netSubscribers: gained - lost,
-      };
-    });
+        shares: anyOAuth ? Number(r.shares || 0) : null,
+        subscribersGained: anyOAuth ? gained : null,
+        subscribersLost: anyOAuth ? lost : null,
+        netSubscribers: anyOAuth ? (gained - lost) : null,
+        hasAnalyticsAccess: anyOAuth,
+      });
+    }
+
+    // If target has OAuth access, fill continuous dates for proper charts
+    if (anyOAuth) {
+      const result: any[] = [];
+      const current = new Date(startDate);
+      const end = new Date(endDate);
+
+      while (current <= end) {
+        const dStr = current.toISOString().split('T')[0];
+        if (rowMap.has(dStr)) {
+          result.push(rowMap.get(dStr));
+        } else {
+          result.push({
+            date: dStr,
+            views: 0,
+            watchTimeMinutes: 0,
+            watchTimeHours: 0,
+            averageViewDurationSeconds: 0,
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            subscribersGained: 0,
+            subscribersLost: 0,
+            netSubscribers: 0,
+            hasAnalyticsAccess: true,
+          });
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      return result;
+    }
+
+    // For non-OAuth, only return dates where real video telemetry was captured
+    return Array.from(rowMap.values()).sort((a, b) => a.date.localeCompare(b.date));
   }
 
   async getVideos(params: {
@@ -926,7 +1265,22 @@ export class YoutubeService {
       .leftJoinAndSelect('video.channel', 'channel');
 
     if (channelId && channelId !== 'all') {
-      query.andWhere('video.channelId = :channelId', { channelId: Number(channelId) });
+      const numId = Number(channelId);
+      if (!isNaN(numId)) {
+        query.andWhere('(channel.id = :numId OR channel.channelId = :channelIdStr)', {
+          numId,
+          channelIdStr: String(channelId),
+        });
+      } else {
+        const cleanHandle = String(channelId).replace(/^@/, '');
+        query.andWhere(
+          '(channel.channelId = :rawId OR channel.customUrl = :rawId OR channel.customUrl = :handleId)',
+          {
+            rawId: String(channelId),
+            handleId: `@${cleanHandle}`,
+          },
+        );
+      }
     }
 
     if (search && search.trim()) {
