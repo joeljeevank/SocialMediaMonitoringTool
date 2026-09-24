@@ -12,16 +12,16 @@ import {
   Users, 
   Trash2, 
   ArrowRight, 
-  FileText,
-  Eye,
-  ThumbsUp,
-  MessageSquare,
-  Clock,
-  Activity,
-  CheckCircle2,
-  TrendingUp,
-  ShieldCheck,
-  RefreshCw
+  FileText, 
+  Eye, 
+  ThumbsUp, 
+  MessageSquare, 
+  Clock, 
+  Activity, 
+  CheckCircle2, 
+  TrendingUp, 
+  ShieldCheck, 
+  RefreshCw 
 } from 'lucide-react';
 
 type Analytics = {
@@ -48,7 +48,6 @@ export default function DashboardOverview() {
   const [newUsername, setNewUsername] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState('');
 
   const fetchAccounts = async () => {
     try {
@@ -63,8 +62,6 @@ export default function DashboardOverview() {
   };
 
   useEffect(() => {
-    const userRole = localStorage.getItem('user_role');
-    setRole(userRole || '');
     fetchAccounts();
   }, []);
 
@@ -140,181 +137,179 @@ export default function DashboardOverview() {
       {/* Header section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
             in
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               LinkedIn Monitoring
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Live impressions, follower growth, reactions, and automated post tracking
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Live impressions, audience reach, engagement, and post metrics
             </p>
           </div>
         </div>
 
-        {(role === 'user' || role === 'manager' || role === 'super_admin' || !role) && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger render={
-              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm h-10 px-4 rounded-xl shadow-sm flex items-center gap-2 cursor-pointer transition-all">
-                <Plus className="w-4 h-4" />
-                <span>Connect LinkedIn Profile</span>
-              </Button>
-            } />
-            <DialogContent className="sm:max-w-md bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-                    in
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      Connect LinkedIn Account
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Enter public profile vanity handle to start tracking metrics
-                    </p>
-                  </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-2 cursor-pointer transition-all">
+              <Plus className="w-3.5 h-3.5" />
+              <span>Connect Profile</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                  in
                 </div>
-
-                <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-300">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-                    Automated Data Sync includes:
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Connect LinkedIn Account
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Enter public vanity username to track metrics
                   </p>
-                  <ul className="space-y-1 list-disc pl-4 text-[11px] text-slate-500 dark:text-slate-400">
-                    <li>Public vanity name, headline & follower counts</li>
-                    <li>Live post impressions, reactions, comments & date stamps</li>
-                    <li>Automated synchronization on-demand or periodic cycles</li>
-                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                <p className="font-semibold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  Automated Metrics Tracking
+                </p>
+                <ul className="space-y-1 list-disc pl-4 text-[11px] text-slate-500 dark:text-slate-400">
+                  <li>Followers, headline, and profile status</li>
+                  <li>Post impressions, reactions, and comments</li>
+                  <li>Historical growth and engagement analytics</li>
+                </ul>
+              </div>
+
+              <form onSubmit={handleConnect} className="space-y-4 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    LinkedIn Vanity Username
+                  </Label>
+                  <Input
+                    placeholder="e.g. mkbhd or satyanadella"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    required
+                    className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-xl"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Found in: linkedin.com/in/<strong>username</strong>
+                  </p>
                 </div>
 
-                <form onSubmit={handleConnect} className="space-y-4 pt-1">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      LinkedIn Profile Vanity Handle
-                    </Label>
-                    <Input
-                      placeholder="e.g. johndoe or joeljeevankumar"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      required
-                      className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10 rounded-xl"
-                    />
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      Found in: linkedin.com/in/<strong>username</strong>
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2.5 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                      className="flex-1 rounded-xl h-10 text-xs font-semibold text-slate-600 dark:text-slate-300"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-10 text-xs font-semibold flex items-center justify-center gap-2"
-                    >
-                      {loading ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Connecting...</span>
-                        </>
-                      ) : (
-                        <span>Authorize & Track</span>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    className="flex-1 rounded-xl h-9 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-9 text-xs font-semibold flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <span>Start Tracking</span>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* KPI Overview Tiles with Vibrant Icon Containers */}
+      {/* KPI Overview Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Tracked Profiles</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
             {accounts.length}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             Active monitoring handles
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Followers</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
             {totalFollowers.toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Aggregated follower reach
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Impressions</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Eye className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
             {totalImpressions.toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Total post view counts
+            Total post impressions
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Synchronized Today</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
             {syncedTodayCount} / {accounts.length}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Up-to-date data collections
+            Up-to-date collections
           </p>
         </div>
       </div>
 
       {/* Accounts Table Card */}
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-indigo-500" />
-            <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+            <Activity className="w-4 h-4 text-blue-600" />
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
               Monitored LinkedIn Profiles
             </h2>
           </div>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-            {accounts.length} Profiles Tracked
+            {accounts.length} Profiles
           </span>
         </div>
 
@@ -379,7 +374,7 @@ export default function DashboardOverview() {
                       <Button
                         type="button"
                         onClick={() => setIsDialogOpen(true)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl h-9 px-4"
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9 px-4"
                       >
                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                         Connect Profile
@@ -405,7 +400,7 @@ export default function DashboardOverview() {
                     <TableRow key={acc.id} className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                       <TableCell>
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
+                          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                             in
                           </div>
                           <div>
@@ -419,19 +414,19 @@ export default function DashboardOverview() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        {latest ? followers.toLocaleString() : '-'}
+                        {latest ? followers.toLocaleString() : '—'}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        {latest ? (latest.views ?? 0).toLocaleString() : '-'}
+                        {latest ? (latest.views ?? 0).toLocaleString() : '—'}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        {latest ? (latest.likes ?? 0).toLocaleString() : '-'}
+                        {latest ? (latest.likes ?? 0).toLocaleString() : '—'}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        {latest ? (latest.comments ?? 0).toLocaleString() : '-'}
+                        {latest ? (latest.comments ?? 0).toLocaleString() : '—'}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        {latest ? (latest.recentPosts ?? 0).toLocaleString() : '-'}
+                        {latest ? (latest.recentPosts ?? 0).toLocaleString() : '—'}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 dark:text-slate-400">
                         {latest?.lastCollectionTime ? (
@@ -453,7 +448,7 @@ export default function DashboardOverview() {
                           <Link
                             href={`/dashboard/${acc.id}`}
                             prefetch={true}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 transition-colors"
                           >
                             <Activity className="w-3.5 h-3.5" />
                             <span>Analytics</span>

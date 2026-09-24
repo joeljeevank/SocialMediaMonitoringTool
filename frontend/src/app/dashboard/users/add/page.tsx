@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowLeft, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -75,130 +75,148 @@ export default function AddUserPage() {
         <Link
           href="/dashboard/users"
           prefetch={true}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
             Register New User
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Add team members or managers with system credentials
           </p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xs">
         {managerSuccess && (
           <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{managerSuccess}</span>
           </div>
         )}
 
         {managerError && (
           <div className="mb-5 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{managerError}</span>
           </div>
         )}
 
         <form onSubmit={handleAddManager} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-              Full Name
-            </Label>
-            <Input
-              type="text"
-              placeholder="e.g. John Doe"
-              value={managerName}
-              onChange={(e) => setManagerName(e.target.value)}
-              required
-              className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10"
-            />
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Company / Organization
+              <Label htmlFor="mgr-name" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Full Name
               </Label>
               <Input
+                id="mgr-name"
                 type="text"
-                placeholder="e.g. Acme Media"
-                value={managerCompany}
-                onChange={(e) => setManagerCompany(e.target.value)}
+                placeholder="e.g. Alex Mercer"
+                value={managerName}
+                onChange={(e) => setManagerName(e.target.value)}
                 required
-                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Position / Job Title
-              </Label>
-              <Input
-                type="text"
-                placeholder="e.g. Marketing Lead"
-                value={managerCompanyRole}
-                onChange={(e) => setManagerCompanyRole(e.target.value)}
-                required
-                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              <Label htmlFor="mgr-email" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Email Address
               </Label>
               <Input
+                id="mgr-email"
                 type="email"
-                placeholder="user@domain.com"
+                placeholder="e.g. alex@example.com"
                 value={managerEmail}
                 onChange={(e) => setManagerEmail(e.target.value)}
                 required
-                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="mgr-company" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Company Name
+              </Label>
+              <Input
+                id="mgr-company"
+                type="text"
+                placeholder="e.g. Acme Corp"
+                value={managerCompany}
+                onChange={(e) => setManagerCompany(e.target.value)}
+                required
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Phone Number
+              <Label htmlFor="mgr-company-role" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Company Job Title
               </Label>
               <Input
-                type="tel"
-                placeholder="+1 555-0199"
-                value={managerPhone}
-                onChange={(e) => setManagerPhone(e.target.value)}
-                className="bg-slate-50 dark:bg-[#0B0F19] border-slate-200 dark:border-slate-700 text-sm h-10"
+                id="mgr-company-role"
+                type="text"
+                placeholder="e.g. Social Lead"
+                value={managerCompanyRole}
+                onChange={(e) => setManagerCompanyRole(e.target.value)}
+                required
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-              System Authorization Level
-            </Label>
-            <select
-              value={managerRole}
-              onChange={(e) => setManagerRole(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-10 px-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="manager">Manager (Elevated Controls)</option>
-              <option value="super_admin">Super Admin (Full Control)</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="mgr-phone" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Phone Number
+              </Label>
+              <Input
+                id="mgr-phone"
+                type="text"
+                placeholder="e.g. +1 555-0199"
+                value={managerPhone}
+                onChange={(e) => setManagerPhone(e.target.value)}
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="mgr-role" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                System Access Level
+              </Label>
+              <select
+                id="mgr-role"
+                value={managerRole}
+                onChange={(e) => setManagerRole(e.target.value)}
+                className="w-full h-9 px-3 text-xs bg-slate-50 dark:bg-[#090d16] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="manager">Manager (Read & Analytics)</option>
+                <option value="super_admin">Super Admin (Full System Access)</option>
+              </select>
+            </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-3 flex justify-end gap-2.5">
+            <Link href="/dashboard/users">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-xs h-9 px-4 rounded-lg"
+              >
+                Cancel
+              </Button>
+            </Link>
             <Button
               type="submit"
               disabled={managerAddLoading}
-              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-10 px-6 rounded-xl"
+              className="text-xs h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg gap-1.5 font-semibold"
             >
-              {managerAddLoading ? 'Creating Account...' : 'Create User Account'}
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>{managerAddLoading ? 'Creating User...' : 'Create Account'}</span>
             </Button>
           </div>
         </form>
