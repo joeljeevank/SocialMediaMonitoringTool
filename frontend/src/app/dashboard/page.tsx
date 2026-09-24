@@ -239,65 +239,65 @@ export default function DashboardOverview() {
 
       {/* KPI Overview Tiles with Vibrant Icon Containers */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Tracked Profiles</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+            <span className="text-xs font-semibold uppercase tracking-wider">Tracked Profiles</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
             {accounts.length}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             Active monitoring handles
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Total Followers</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Followers</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
             {totalFollowers.toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Aggregated follower reach
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Total Impressions</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Impressions</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Eye className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
             {totalImpressions.toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Total post view counts
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Synchronized Today</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider">Synchronized Today</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
             {syncedTodayCount} / {accounts.length}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Up-to-date data collections
           </p>

@@ -318,65 +318,65 @@ export default function ProfileDashboard() {
 
       {/* Metric KPI Cards with Elegant Icon Badges */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Tracked Profiles</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+            <span className="text-xs font-semibold uppercase tracking-wider">Tracked Profiles</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
             {accounts.length}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             LinkedIn profiles active
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Total Followers</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Followers</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Activity className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
             {totalFollowers.toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Across connected profiles
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">Total Posts Scraped</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Posts Scraped</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
               <FileText className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-3">
             {totalPosts.toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
             Monitored post updates
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm card-interactive">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-medium">System Health</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <span className="text-xs font-semibold uppercase tracking-wider">System Health</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Zap className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+          <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
             100%
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Collector engine active
           </p>
@@ -388,64 +388,64 @@ export default function ProfileDashboard() {
         <Link
           href="/dashboard"
           prefetch={true}
-          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500/50 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between"
+          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500/60 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between card-interactive"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm group-hover:scale-105 transition-transform shadow-xs">
               in
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 LinkedIn Monitoring
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 View profile engagement & posts
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
         </Link>
 
         <Link
           href="/dashboard/youtube"
           prefetch={true}
-          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-red-500 dark:hover:border-red-500/50 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between"
+          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-red-500 dark:hover:border-red-500/60 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between card-interactive"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
               <YoutubeIcon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                 YouTube Analytics
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Channel intelligence & video stats
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-red-600 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-red-600 group-hover:translate-x-1 transition-all" />
         </Link>
 
         <Link
           href="/dashboard/reports"
           prefetch={true}
-          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500/50 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between"
+          className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500/60 rounded-2xl p-5 shadow-sm transition-all group flex items-center justify-between card-interactive"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
               <BarChart3 className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                 Reports & Export
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Generate CSV, JSON & PDF analytics
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
         </Link>
       </div>
 

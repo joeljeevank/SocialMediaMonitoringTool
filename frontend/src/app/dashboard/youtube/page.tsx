@@ -862,37 +862,37 @@ export default function YouTubeDashboardPage() {
         ].map((card, i) => (
           <Card
             key={i}
-            className={`glass border rounded-3xl p-5 hover:shadow-lg transition-all hover:scale-[1.02] ${
+            className={`rounded-2xl p-5 shadow-sm card-interactive transition-all border ${
               card.locked
-                ? 'border-amber-500/20 bg-amber-500/[0.02]'
-                : 'border-purple-200 dark:border-white/5'
+                ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'
+                : 'bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-800'
             }`}
           >
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-slate-500 dark:text-gray-400">{card.label}</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{card.label}</span>
                 {card.live && (
-                  <span className="inline-flex items-center gap-1 py-0.5 px-1.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     LIVE
                   </span>
                 )}
                 {card.locked && (
-                  <span className="inline-flex items-center gap-1 py-0.5 px-1.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
                     <Lock className="w-2.5 h-2.5" />
                     STUDIO ONLY
                   </span>
                 )}
               </div>
-              <div className={`w-10 h-10 rounded-2xl bg-gradient-to-tr ${card.bg} flex items-center justify-center ${card.color} shadow-inner`}>
-                <card.icon className="w-5 h-5" />
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${card.bg} flex items-center justify-center ${card.color} shadow-xs`}>
+                <card.icon className="w-4 h-4" />
               </div>
             </div>
-            <div className={`text-2xl font-extrabold tracking-tight ${card.locked ? 'text-amber-600 dark:text-amber-400 text-base flex items-center gap-1.5 py-1' : 'text-slate-900 dark:text-white'}`}>
-              {card.locked && <Lock className="w-4 h-4 text-amber-500 shrink-0" />}
+            <div className={`text-2xl font-bold tracking-tight ${card.locked ? 'text-amber-700 dark:text-amber-400 text-sm flex items-center gap-1.5 py-1' : 'text-slate-900 dark:text-white'}`}>
+              {card.locked && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
               {card.value}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-gray-400 font-medium mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">
               {card.sub}
             </p>
           </Card>
