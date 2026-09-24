@@ -9,16 +9,16 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { 
   Clock, 
   ArrowRight, 
-  Settings,
-  Users,
-  BarChart3,
-  CheckCircle2,
-  Globe,
-  Lock,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  KeyRound
+  Settings, 
+  Users, 
+  BarChart3, 
+  CheckCircle2, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  AlertCircle, 
+  KeyRound,
+  Plus
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 
@@ -41,8 +41,24 @@ type Account = {
   analytics?: Analytics[];
 };
 
+type Channel = {
+  id: number;
+  channelId: string;
+  title: string;
+  customUrl?: string;
+  thumbnailUrl?: string;
+  subscribers: number;
+  totalViews?: string;
+  totalVideos?: number;
+  status?: string;
+  lastSyncedAt?: string;
+  googleAccountEmail?: string;
+  isOAuth?: boolean;
+};
+
 export default function ProfileDashboard() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [userDetails, setUserDetails] = useState({
     name: '',
     companyName: '',
@@ -71,7 +87,19 @@ export default function ProfileDashboard() {
         setAccounts(data);
       }
     } catch (error) {
-      console.error('Failed to fetch accounts', error);
+      console.error('Failed to fetch LinkedIn accounts', error);
+    }
+  };
+
+  const fetchChannels = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/youtube/channels');
+      if (res.ok) {
+        const data = await res.json();
+        setChannels(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch YouTube channels', error);
     }
   };
 
@@ -85,6 +113,7 @@ export default function ProfileDashboard() {
       email: localStorage.getItem('user_email') || 'admin@socialmonitor.com'
     });
     fetchAccounts();
+    fetchChannels();
   }, []);
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -363,119 +392,242 @@ export default function ProfileDashboard() {
         </Link>
       </div>
 
-      {/* Connected Profiles List */}
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Globe className="w-4 h-4" />
+      {/* Connected Social Accounts Container */}
+      <div className="space-y-6">
+        {/* SECTION 1: CONNECTED LINKEDIN PROFILES */}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+                in
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                  Connected LinkedIn Profiles
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {accounts.length} active LinkedIn profile{accounts.length === 1 ? '' : 's'} tracked
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
-                Connected Social Accounts
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Tracked profiles and real-time synchronization status
-              </p>
-            </div>
+            <Link
+              href="/dashboard"
+              prefetch={true}
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+            >
+              <span>Manage LinkedIn</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            href="/dashboard"
-            prefetch={true}
-            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-          >
-            <span>Manage Accounts</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+
+          <div className="p-6">
+            {accounts.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                  <Users className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">No LinkedIn profiles connected</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Connect a LinkedIn handle to monitor public profile metrics and posts.
+                </p>
+                <Link
+                  href="/dashboard"
+                  prefetch={true}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-3"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Connect LinkedIn Profile</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {accounts.map((acc) => {
+                  const sorted = acc.analytics
+                    ? [...acc.analytics].sort((a, b) => new Date(a.lastCollectionTime || a.date).getTime() - new Date(b.lastCollectionTime || b.date).getTime())
+                    : [];
+                  const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+                  const lastSync = latest?.lastCollectionTime 
+                    ? new Date(latest.lastCollectionTime).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Pending';
+
+                  const isSyncedToday = latest?.lastCollectionTime 
+                    ? new Date(latest.lastCollectionTime).toDateString() === new Date().toDateString()
+                    : false;
+
+                  return (
+                    <div 
+                      key={acc.id} 
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all flex flex-col justify-between gap-3 group card-interactive"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+                            in
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" title={acc.username}>
+                              {acc.username}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {acc.platform}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          isSyncedToday 
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isSyncedToday ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                          {isSyncedToday ? 'Synced' : 'Pending'}
+                        </span>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          {lastSync}
+                        </span>
+                        <Link
+                          href={`/dashboard/${acc.id}`}
+                          prefetch={true}
+                          className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                        >
+                          <span>Analytics</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="p-6">
-          {accounts.length === 0 ? (
-            <div className="text-center py-10 text-slate-500 dark:text-slate-400">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400">
-                <Users className="w-6 h-6" />
+        {/* SECTION 2: CONNECTED YOUTUBE CHANNELS */}
+        <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center">
+                <YoutubeIcon className="w-4 h-4" />
               </div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">No connected profiles found</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Connect your first LinkedIn handle to view performance metrics.
-              </p>
-              <Link
-                href="/dashboard"
-                prefetch={true}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-3"
-              >
-                <span>Connect a profile</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              <div>
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                  Connected YouTube Channels
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {channels.length} connected or tracked YouTube channel{channels.length === 1 ? '' : 's'}
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {accounts.map((acc) => {
-                const sorted = acc.analytics
-                  ? [...acc.analytics].sort((a, b) => new Date(a.lastCollectionTime || a.date).getTime() - new Date(b.lastCollectionTime || b.date).getTime())
-                  : [];
-                const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
-                const lastSync = latest?.lastCollectionTime 
-                  ? new Date(latest.lastCollectionTime).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : 'Pending';
+            <Link
+              href="/dashboard/youtube"
+              prefetch={true}
+              className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
+            >
+              <span>Manage YouTube</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
 
-                const isSyncedToday = latest?.lastCollectionTime 
-                  ? new Date(latest.lastCollectionTime).toDateString() === new Date().toDateString()
-                  : false;
+          <div className="p-6">
+            {channels.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-red-500">
+                  <YoutubeIcon className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">No YouTube channels connected</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Track public channels or sign in with Google OAuth for Studio analytics.
+                </p>
+                <Link
+                  href="/dashboard/youtube"
+                  prefetch={true}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:underline mt-3"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Connect YouTube Channel</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {channels.map((ch) => {
+                  const isSyncedToday = ch.lastSyncedAt
+                    ? new Date(ch.lastSyncedAt).toDateString() === new Date().toDateString()
+                    : false;
 
-                return (
-                  <div 
-                    key={acc.id} 
-                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all flex flex-col justify-between gap-3 group"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
-                          in
+                  const lastSync = ch.lastSyncedAt 
+                    ? new Date(ch.lastSyncedAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Pending';
+
+                  return (
+                    <div 
+                      key={ch.id} 
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all flex flex-col justify-between gap-3 group card-interactive"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {ch.thumbnailUrl ? (
+                            <img 
+                              src={ch.thumbnailUrl} 
+                              alt={ch.title} 
+                              className="w-10 h-10 rounded-xl object-cover border border-red-500/20 flex-shrink-0 shadow-sm"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
+                              <YoutubeIcon className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" title={ch.title}>
+                              {ch.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              YouTube • {Number(ch.subscribers || 0).toLocaleString()} Subs
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" title={acc.username}>
-                            {acc.username}
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {acc.platform}
-                          </p>
-                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          isSyncedToday 
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isSyncedToday ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                          {isSyncedToday ? 'Synced' : 'Pending'}
+                        </span>
                       </div>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        isSyncedToday 
-                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60'
-                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${isSyncedToday ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                        {isSyncedToday ? 'Synced' : 'Pending'}
-                      </span>
-                    </div>
 
-                    <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        {lastSync}
-                      </span>
-                      <Link
-                        href={`/dashboard/${acc.id}`}
-                        prefetch={true}
-                        className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                      >
-                        <span>Analytics</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
+                      <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          {lastSync}
+                        </span>
+                        <Link
+                          href="/dashboard/youtube"
+                          prefetch={true}
+                          className="font-semibold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
+                        >
+                          <span>Analytics</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
