@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,7 +138,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function YouTubeDashboardPage() {
+function YouTubeDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1706,5 +1706,13 @@ export default function YouTubeDashboardPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function YouTubeDashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-slate-400 animate-pulse">Loading YouTube Analytics...</div>}>
+      <YouTubeDashboardContent />
+    </Suspense>
   );
 }

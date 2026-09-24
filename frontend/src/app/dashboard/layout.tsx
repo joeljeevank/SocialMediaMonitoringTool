@@ -23,14 +23,12 @@ import { YoutubeIcon } from '@/components/icons/youtube-icon';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('User');
+  const [userName, setUserName] = useState<string>('Administrator');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const token = localStorage.getItem('admin_token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
     if (!token) {
       router.push('/');
     } else {
@@ -56,8 +54,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     localStorage.removeItem('company_role');
     router.push('/');
   };
-
-  if (!mounted) return null;
 
   // My Profile is #1 FIRST in navigation
   const navItems = [
@@ -180,6 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 key={item.href}
                 href={item.href}
                 prefetch={true}
+                onMouseEnter={() => router.prefetch(item.href)}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 cursor-pointer ${
                   item.active
@@ -269,7 +266,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Dynamic Page Scroll Area */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-[#090D16] custom-scrollbar">
-          <div key={pathname} className="max-w-7xl mx-auto space-y-6 animate-in fade-in-50 duration-100">
+          <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>
         </main>
