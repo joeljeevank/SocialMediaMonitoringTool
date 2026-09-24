@@ -7,8 +7,7 @@ import {
   ArrowRight, 
   Building2, 
   Mail, 
-  ShieldCheck, 
-  Settings,
+  ShieldCheck,
   Users,
   Activity,
   BarChart3,
@@ -132,17 +131,6 @@ export default function ProfileDashboard() {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/dashboard/settings"
-              prefetch={true}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
-            >
-              <Settings className="w-4 h-4 text-slate-500" />
-              <span>Edit Settings</span>
-            </Link>
           </div>
         </div>
       </div>
