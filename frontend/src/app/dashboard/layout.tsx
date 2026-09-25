@@ -214,14 +214,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onPointerDown={() => prefetchRoute(item.href)}
                 onTouchStart={() => prefetchRoute(item.href)}
                 onClick={() => handleNavClick(item.href)}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                   item.active
-                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold border-indigo-600 dark:border-indigo-500 border-l-2 shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 hover:text-slate-900 dark:hover:text-white border-l-2 border-transparent'
+                    ? 'bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-cyan-300 font-bold border-indigo-600 dark:border-cyan-400 border-l-2 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-cyan-300 border-l-2 border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <Icon className={`w-4 h-4 transition-colors ${
+                    item.active 
+                      ? 'text-indigo-600 dark:text-cyan-400' 
+                      : 'text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-300'
+                  }`} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
