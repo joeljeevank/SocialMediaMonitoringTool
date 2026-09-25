@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { 
   Plus, 
   Users, 
@@ -48,6 +50,7 @@ export default function DashboardOverview() {
   const [newUsername, setNewUsername] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(true);
 
   const fetchAccounts = async () => {
     try {
@@ -58,6 +61,8 @@ export default function DashboardOverview() {
       }
     } catch (error) {
       console.error('Failed to fetch accounts', error);
+    } finally {
+      setAccountsLoading(false);
     }
   };
 
@@ -234,7 +239,7 @@ export default function DashboardOverview() {
 
       {/* KPI Overview Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01]">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Tracked Profiles</span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -242,7 +247,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
-            {accounts.length}
+            {accountsLoading ? <Skeleton className="h-8 w-14 my-0.5 rounded-lg" /> : accounts.length}
           </p>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -250,7 +255,7 @@ export default function DashboardOverview() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01]">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Followers</span>
             <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -258,7 +263,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
-            {totalFollowers.toLocaleString()}
+            {accountsLoading ? <Skeleton className="h-8 w-20 my-0.5 rounded-lg" /> : totalFollowers.toLocaleString()}
           </p>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -266,7 +271,7 @@ export default function DashboardOverview() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01]">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Impressions</span>
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -274,7 +279,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
-            {totalImpressions.toLocaleString()}
+            {accountsLoading ? <Skeleton className="h-8 w-20 my-0.5 rounded-lg" /> : totalImpressions.toLocaleString()}
           </p>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -282,7 +287,7 @@ export default function DashboardOverview() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs card-hover-effect">
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01]">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Synchronized Today</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -290,7 +295,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
-            {syncedTodayCount} / {accounts.length}
+            {accountsLoading ? <Skeleton className="h-8 w-14 my-0.5 rounded-lg" /> : `${syncedTodayCount} / ${accounts.length}`}
           </p>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -358,7 +363,7 @@ export default function DashboardOverview() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.length === 0 ? (
+              {accounts.length === 0 && !accountsLoading ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-12 text-slate-500 dark:text-slate-400">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">

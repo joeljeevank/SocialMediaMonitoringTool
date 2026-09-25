@@ -1,4 +1,7 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from './account.entity';
@@ -17,9 +20,13 @@ export class LinkedinService {
   ) {}
 
   private async getAccount(accountId: number): Promise<Account> {
-    const account = await this.accountRepo.findOne({ where: { id: accountId } });
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
     if (!account || !account.accessToken) {
-      throw new UnauthorizedException('Account not found or not connected to LinkedIn');
+      throw new UnauthorizedException(
+        'Account not found or not connected to LinkedIn',
+      );
     }
     return account;
   }
@@ -39,7 +46,9 @@ export class LinkedinService {
       });
       return response.data;
     } catch (error: any) {
-      throw new UnauthorizedException(error.response?.data || 'Failed to fetch user info');
+      throw new UnauthorizedException(
+        error.response?.data || 'Failed to fetch user info',
+      );
     }
   }
 
@@ -50,9 +59,9 @@ export class LinkedinService {
       // Requires: r_organization_admin or rw_organization_admin
       const response = await axios.get(
         'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED',
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
-      
+
       const elements = response.data.elements || [];
       const orgs = [];
       for (const el of elements) {
@@ -61,8 +70,15 @@ export class LinkedinService {
       }
       return { organizations: orgs };
     } catch (error: any) {
-      console.error('LinkedIn API Error (getOrganizations):', error.response?.data || error.message);
-      return { error: 'Missing permission r_organization_admin or Community Management API access', details: error.response?.data };
+      console.error(
+        'LinkedIn API Error (getOrganizations):',
+        error.response?.data || error.message,
+      );
+      return {
+        error:
+          'Missing permission r_organization_admin or Community Management API access',
+        details: error.response?.data,
+      };
     }
   }
 
@@ -73,11 +89,14 @@ export class LinkedinService {
       const orgId = orgUrn.split(':').pop();
       const response = await axios.get(
         `https://api.linkedin.com/rest/organizations/${orgId}`,
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
       return response.data;
     } catch (error: any) {
-      return { error: 'Missing permission r_organization_admin', details: error.response?.data };
+      return {
+        error: 'Missing permission r_organization_admin',
+        details: error.response?.data,
+      };
     }
   }
 
@@ -87,11 +106,14 @@ export class LinkedinService {
       // Requires r_organization_admin
       const response = await axios.get(
         `https://api.linkedin.com/rest/organizationalEntityFollowerStatistics?q=organizationalEntity&organizationalEntity=${orgUrn}`,
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
       return response.data;
     } catch (error: any) {
-      return { error: 'Missing permission r_organization_admin', details: error.response?.data };
+      return {
+        error: 'Missing permission r_organization_admin',
+        details: error.response?.data,
+      };
     }
   }
 
@@ -101,11 +123,14 @@ export class LinkedinService {
       // Requires r_organization_admin
       const response = await axios.get(
         `https://api.linkedin.com/rest/organizationPageStatistics?q=organization&organization=${orgUrn}`,
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
       return response.data;
     } catch (error: any) {
-      return { error: 'Missing permission r_organization_admin', details: error.response?.data };
+      return {
+        error: 'Missing permission r_organization_admin',
+        details: error.response?.data,
+      };
     }
   }
 
@@ -115,11 +140,14 @@ export class LinkedinService {
       // Requires r_organization_admin
       const response = await axios.get(
         `https://api.linkedin.com/rest/posts?author=${orgUrn}&q=author`,
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
       return response.data;
     } catch (error: any) {
-      return { error: 'Missing permission r_organization_admin', details: error.response?.data };
+      return {
+        error: 'Missing permission r_organization_admin',
+        details: error.response?.data,
+      };
     }
   }
 
@@ -129,11 +157,14 @@ export class LinkedinService {
       // Requires r_organization_admin
       const response = await axios.get(
         `https://api.linkedin.com/rest/socialActions/${encodeURIComponent(postUrn)}/likes`,
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
       return response.data;
     } catch (error: any) {
-      return { error: 'Missing permission r_organization_admin', details: error.response?.data };
+      return {
+        error: 'Missing permission r_organization_admin',
+        details: error.response?.data,
+      };
     }
   }
 
@@ -143,11 +174,14 @@ export class LinkedinService {
       // Requires r_organization_admin
       const response = await axios.get(
         `https://api.linkedin.com/rest/socialActions/${encodeURIComponent(postUrn)}/comments`,
-        { headers: this.getHeaders(account.accessToken) }
+        { headers: this.getHeaders(account.accessToken) },
       );
       return response.data;
     } catch (error: any) {
-      return { error: 'Missing permission r_organization_admin', details: error.response?.data };
+      return {
+        error: 'Missing permission r_organization_admin',
+        details: error.response?.data,
+      };
     }
   }
 

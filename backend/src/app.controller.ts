@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, Res, Delete, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Res,
+  Delete,
+  Patch,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { AppService } from './app.service';
 

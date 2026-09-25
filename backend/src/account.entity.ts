@@ -23,10 +23,10 @@ export class Account {
   @Column({ nullable: true })
   accessToken: string; // Storing access token securely
 
-  @OneToMany(() => Analytics, analytics => analytics.account)
+  @OneToMany(() => Analytics, (analytics) => analytics.account)
   analytics: Analytics[];
 
-  @OneToMany(() => Organization, org => org.admin)
+  @OneToMany(() => Organization, (org) => org.admin)
   organizations: Organization[];
 
   @OneToMany(() => Post, post => post.account)
