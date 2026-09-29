@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,18 +29,36 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [, startTransition] = useTransition();
+
+  // Aggressively prefetch all dashboard routes on mount for sub-second login redirects
+  useEffect(() => {
+    router.prefetch('/dashboard/profile');
+    router.prefetch('/dashboard');
+    router.prefetch('/dashboard/youtube');
+    router.prefetch('/dashboard/reports');
+  }, [router]);
+
+  const prefetchDashboard = () => {
+    try {
+      router.prefetch('/dashboard/profile');
+      router.prefetch('/dashboard');
+    } catch {}
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-
+    
     const cleanUsername = username.trim();
     if (!cleanUsername || !password) {
-      setError('Please enter your username and password.');
+      setError('Please enter both your username and password.');
       setLoading(false);
       return;
     }
+
+    setLoading(true);
+    prefetchDashboard();
 
     try {
       const res = await fetch('http://localhost:3001/auth/login', {
@@ -51,20 +69,25 @@ export default function LoginPage() {
 
       if (res.ok) {
         const data = await res.json();
+        // Save session items synchronously
         localStorage.setItem('admin_token', data.access_token);
         localStorage.setItem('user_role', data.role);
         if (data.name) localStorage.setItem('user_name', data.name);
         if (data.companyName) localStorage.setItem('company_name', data.companyName);
         if (data.companyRole) localStorage.setItem('company_role', data.companyRole);
         if (data.email) localStorage.setItem('user_email', data.email);
-        router.push('/dashboard/profile');
+
+        // Instant optimistic transition using prefetched route
+        startTransition(() => {
+          router.push('/dashboard/profile');
+        });
       } else {
         const errData = await res.json().catch(() => ({}));
         setError(errData.message || 'Invalid username or password.');
+        setLoading(false);
       }
     } catch {
       setError('Unable to reach authentication server. Please verify the backend service is running on port 3001.');
-    } finally {
       setLoading(false);
     }
   };
@@ -128,6 +151,7 @@ export default function LoginPage() {
                 onClick={() => {
                   setRole('admin');
                   setError('');
+                  prefetchDashboard();
                 }}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   role === 'admin'
@@ -143,6 +167,7 @@ export default function LoginPage() {
                 onClick={() => {
                   setRole('manager');
                   setError('');
+                  prefetchDashboard();
                 }}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   role === 'manager'
@@ -177,6 +202,7 @@ export default function LoginPage() {
                     placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    onFocus={prefetchDashboard}
                     className="pl-10 h-10 bg-slate-50/80 dark:bg-black/50 border-slate-200 dark:border-white/10 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                     required
                   />
@@ -195,6 +221,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onFocus={prefetchDashboard}
                     className="pl-10 pr-10 h-10 bg-slate-50/80 dark:bg-black/50 border-slate-200 dark:border-white/10 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                     required
                   />

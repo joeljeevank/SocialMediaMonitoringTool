@@ -27,6 +27,10 @@ obj/
 # Logs
 *.log
 
+# Temp Browser Profiles & Scraping Dumps
+.linkedin-browser-profile*/
+*.html
+
 # OS
 Thumbs.db
 .DS_Store

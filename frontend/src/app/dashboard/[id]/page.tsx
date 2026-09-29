@@ -395,40 +395,8 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Action Controls & Realtime Last Collected Indicator with Smooth Curved Pills */}
+        {/* Action Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="relative flex h-2.5 w-2.5 shrink-0">
-              {isSynchronized ? (
-                <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </>
-              ) : (
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-              )}
-            </div>
-            <Clock className="w-4 h-4 text-cyan-500 shrink-0" />
-            <div className="text-xs flex items-center flex-wrap gap-1.5">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                isSynchronized 
-                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
-                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-              }`}>
-                {isSynchronized ? 'Synchronized' : 'Pending Sync'}
-              </span>
-              <span className="text-slate-500 dark:text-gray-400 font-medium">Last Synchronized:</span>
-              <span className="font-semibold text-slate-900 dark:text-white">
-                {formatDateTime(effectiveLastCollectionTime) || 'Never'}
-              </span>
-              {effectiveLastCollectionTime && (
-                <span className="text-cyan-600 dark:text-cyan-400 font-medium">
-                  ({getRelativeTime(effectiveLastCollectionTime)})
-                </span>
-              )}
-            </div>
-          </div>
-
           <Button 
             onClick={handleCollectLinkedInData} 
             disabled={collecting}
@@ -498,7 +466,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Quick Metadata Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-slate-800 text-xs">
+            <div className="grid grid-cols-2 gap-3.5 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-slate-800 text-xs">
               <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Sync Status</span>
                 <span className={`font-semibold flex items-center gap-1.5 ${isSynchronized ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
@@ -507,21 +475,10 @@ export default function AnalyticsPage() {
                 </span>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Data Source</span>
-                <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                  {scrapedData?.dataSource || latest?.dataSource || 'LinkedIn Scraper'}
-                </span>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Posts Analyzed</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
                   {scrapedData?.posts?.length ?? latest?.recentPosts ?? 0} posts
                 </span>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <span className="text-slate-500 dark:text-slate-400 block mb-0.5">Scraper Engine</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Playwright Active</span>
               </div>
             </div>
           </div>

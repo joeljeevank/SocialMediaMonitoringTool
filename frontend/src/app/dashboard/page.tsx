@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { 
   Plus, 
   Users, 
@@ -49,6 +51,7 @@ export default function DashboardOverview() {
   const [newUsername, setNewUsername] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(true);
 
   const fetchAccounts = async () => {
     try {
@@ -59,6 +62,8 @@ export default function DashboardOverview() {
       }
     } catch (error) {
       console.error('Failed to fetch accounts', error);
+    } finally {
+      setAccountsLoading(false);
     }
   };
 
@@ -249,7 +254,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-3 font-mono">
-            {accounts.length}
+            {accountsLoading ? <Skeleton className="h-8 w-14 my-0.5 rounded-lg" /> : accounts.length}
           </p>
           <p className="text-[11px] text-sky-500 font-semibold mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
@@ -265,7 +270,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-3 font-mono">
-            {totalFollowers.toLocaleString()}
+            {accountsLoading ? <Skeleton className="h-8 w-20 my-0.5 rounded-lg" /> : totalFollowers.toLocaleString()}
           </p>
           <p className="text-[11px] text-indigo-400 font-semibold mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -281,7 +286,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-3 font-mono">
-            {totalImpressions.toLocaleString()}
+            {accountsLoading ? <Skeleton className="h-8 w-20 my-0.5 rounded-lg" /> : totalImpressions.toLocaleString()}
           </p>
           <p className="text-[11px] text-amber-400 font-semibold mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -297,7 +302,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-emerald-500 mt-3 font-mono">
-            {syncedTodayCount} / {accounts.length}
+            {accountsLoading ? <Skeleton className="h-8 w-14 my-0.5 rounded-lg" /> : `${syncedTodayCount} / ${accounts.length}`}
           </p>
           <p className="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -365,7 +370,7 @@ export default function DashboardOverview() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.length === 0 ? (
+              {accounts.length === 0 && !accountsLoading ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-14 text-slate-500 dark:text-slate-400">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">

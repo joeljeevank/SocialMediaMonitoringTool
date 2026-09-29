@@ -27,7 +27,7 @@ dotenv.config();
       host: 'localhost',
       port: 5432,
       username: 'postgres',
-      password: process.env.DB_PASSWORD || 'post123',
+      password: process.env.DB_PASSWORD || 'sqlroot',
       database: 'postgres',
       entities: [Account, Analytics, Organization, Post, User, YouTubeChannel, YouTubeVideo, YouTubeAnalytics],
       synchronize: true, // Auto create schema

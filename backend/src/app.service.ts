@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Account } from './account.entity';
 import { Analytics } from './analytics.entity';
 import { User } from './user.entity';
@@ -20,55 +20,69 @@ export class AppService {
   ) {}
 
   async login(body: any) {
-    if (body.username === 'admin') {
-      const adminUser = await this.userRepo.findOne({ where: { email: 'admin' } });
-      if (adminUser) {
-        if (adminUser.password === body.password) {
-           return { 
-             access_token: 'mock-jwt-token-superadmin', 
-             role: 'super_admin', 
-             email: adminUser.email,
-             name: adminUser.name || 'Admin',
-             companyName: adminUser.companyName || 'System',
-             companyRole: adminUser.companyRole || 'Administrator'
-           };
-        }
-        throw new UnauthorizedException('Invalid credentials');
-      } else if (body.password === 'admin123') {
-        return { 
-          access_token: 'mock-jwt-token-superadmin', 
-          role: 'super_admin', 
-          email: 'admin',
-          name: 'Super Admin',
-          companyName: 'System',
-          companyRole: 'Administrator'
-        };
-      }
-      throw new UnauthorizedException('Invalid credentials');
+    const username = (body.username || '').trim();
+    const password = (body.password || '').trim();
+
+    if (!username || !password) {
+      throw new UnauthorizedException('Please enter both username and password.');
     }
-    
-    const user = await this.userRepo.findOne({ where: { email: body.username } });
-    if (user && user.password === body.password) {
-      return { 
-        access_token: 'mock-jwt-token-manager', 
-        role: user.role, 
-        name: user.name,
-        companyName: user.companyName,
-        companyRole: user.companyRole,
-        email: user.email
+
+    const lowerUser = username.toLowerCase();
+
+    // Fast path for default admin credential
+    if (lowerUser === 'admin' && password === 'admin123') {
+      const adminUser = await this.userRepo.findOne({
+        where: [{ email: 'admin' }, { email: 'admin@example.com' }],
+      }).catch(() => null);
+
+      return {
+        access_token: 'mock-jwt-token-superadmin',
+        role: 'super_admin',
+        email: adminUser?.email || 'admin@example.com',
+        name: adminUser?.name || 'Super Admin',
+        companyName: adminUser?.companyName || 'System Enterprise',
+        companyRole: adminUser?.companyRole || 'Administrator',
       };
     }
 
-    throw new UnauthorizedException('Invalid credentials');
+    // Direct DB lookup for admin or regular system users
+    const user = await this.userRepo.findOne({
+      where: [
+        { email: ILike(username) },
+        { name: ILike(username) },
+      ],
+    });
+
+    if (user && user.password === password) {
+      return {
+        access_token: user.role === 'super_admin' ? 'mock-jwt-token-superadmin' : 'mock-jwt-token-manager',
+        role: user.role,
+        name: user.name,
+        companyName: user.companyName,
+        companyRole: user.companyRole,
+        email: user.email,
+      };
+    }
+
+    throw new UnauthorizedException('Invalid username or password.');
   }
 
   async getManagers() {
     return this.userRepo.find();
   }
 
-  async createManager(data: { name: string; companyName: string; companyRole?: string; phone: string; email: string; role?: string }) {
+  async createManager(data: {
+    name: string;
+    companyName: string;
+    companyRole?: string;
+    phone: string;
+    email: string;
+    role?: string;
+  }) {
     // Check if user already exists
-    const existingUser = await this.userRepo.findOne({ where: { email: data.email } });
+    const existingUser = await this.userRepo.findOne({
+      where: { email: data.email },
+    });
     if (existingUser) {
       const { BadRequestException } = require('@nestjs/common');
       throw new BadRequestException('A user with this email already exists.');
@@ -84,34 +98,34 @@ export class AppService {
       role: data.role || 'user',
       phone: data.phone,
       email: data.email,
-      password: generatedPassword
+      password: generatedPassword,
     });
 
     await this.userRepo.save(newUser);
 
     // Setup Nodemailer with real SMTP
     try {
-      let transporter = nodemailer.createTransport({
+      const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true, // true for 465, false for other ports
         auth: {
-          user: process.env.EMAIL_USER, 
+          user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
       });
 
-      let info = await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: `"MonitorHQ Admin" <${process.env.EMAIL_USER}>`,
         to: data.email,
-        subject: "Your Manager Account Details",
+        subject: 'Your Manager Account Details',
         text: `Hello ${data.name},\n\nYour manager account for MonitorHQ has been created.\n\nUsername: ${data.email}\nPassword: ${generatedPassword}\n\nPlease login and connect your LinkedIn account.`,
         html: `<p>Hello ${data.name},</p><p>Your manager account for MonitorHQ has been created.</p><p><b>Username:</b> ${data.email}<br/><b>Password:</b> ${generatedPassword}</p><p>Please login and connect your LinkedIn account.</p>`,
       });
 
-      console.log("Real email successfully sent to: %s", data.email);
+      console.log('Real email successfully sent to: %s', data.email);
     } catch (err) {
-      console.error("Failed to send real email:", err);
+      console.error('Failed to send real email:', err);
     }
 
     return newUser;
@@ -160,9 +174,9 @@ export class AppService {
       profileUrl: `https://linkedin.com/in/${data.username}`,
       status: 'Connected',
     });
-    
+
     const saved = await this.accountRepo.save(newAccount);
-    
+
     // Seed initial analytics with zeros instead of mock data
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0];
@@ -174,7 +188,7 @@ export class AppService {
       views: 0,
       followers: 0,
       recentPosts: 0,
-      account: saved
+      account: saved,
     });
     await this.analyticsRepo.save([initialAnalytics]);
 
@@ -184,7 +198,7 @@ export class AppService {
   async getAccounts() {
     return this.accountRepo.find({
       relations: {
-        analytics: true
+        analytics: true,
       },
     });
   }
@@ -200,17 +214,17 @@ export class AppService {
     const clientId = process.env.LINKEDIN_CLIENT_ID || '';
     const redirectUri = process.env.LINKEDIN_REDIRECT_URI || '';
     // Requesting standard openid scopes as marketing scopes require approved app products
-    const scope = 'openid profile email'; 
+    const scope = 'openid profile email';
     const state = 'random_string_for_security';
-    
+
     const authorizationUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scope)}`;
-    
+
     return res.redirect(authorizationUrl);
   }
 
   async linkedinCallback(query: any, res: Response) {
     const { code, error, error_description } = query;
-    
+
     if (error) {
       console.error('LinkedIn OAuth Denied/Failed:', error, error_description);
       return res.status(400).send(`OAuth Error: ${error_description || error}`);
@@ -235,19 +249,22 @@ export class AppService {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        }
+        },
       );
 
       const accessToken = response.data.access_token;
-      
+
       // Fetch real user info from LinkedIn
-      const userInfoResponse = await axios.get('https://api.linkedin.com/v2/userinfo', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      
+      const userInfoResponse = await axios.get(
+        'https://api.linkedin.com/v2/userinfo',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+
       const linkedinId = userInfoResponse.data.sub;
       const name = userInfoResponse.data.name;
-      
+
       // Attempt to get followers/stats if possible, but standard API won't allow this without specific products.
       // We will try catching it, and if it fails, fallback to generating data for the newly created account.
       let followers = 0;
@@ -256,25 +273,33 @@ export class AppService {
       let shares = 0;
       let views = 0;
       let recentPosts = 0;
-      
+
       try {
-         // This is a pseudo-call for what you'd do with proper permissions
-         const networkResponse = await axios.get(`https://api.linkedin.com/v2/networkSizes/urn:li:person:${linkedinId}?edgeType=Follower`, {
-           headers: { Authorization: `Bearer ${accessToken}`, 'LinkedIn-Version': '202304' }
-         });
-         followers = networkResponse.data.firstDegreeSize || 0;
+        // This is a pseudo-call for what you'd do with proper permissions
+        const networkResponse = await axios.get(
+          `https://api.linkedin.com/v2/networkSizes/urn:li:person:${linkedinId}?edgeType=Follower`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'LinkedIn-Version': '202304',
+            },
+          },
+        );
+        followers = networkResponse.data.firstDegreeSize || 0;
       } catch (e) {
-         // API doesn't have permission for these extended scopes, fallback to zeros (no mock data)
-         followers = 0;
-         likes = 0;
-         comments = 0;
-         shares = 0;
-         views = 0;
-         recentPosts = 0;
+        // API doesn't have permission for these extended scopes, fallback to zeros (no mock data)
+        followers = 0;
+        likes = 0;
+        comments = 0;
+        shares = 0;
+        views = 0;
+        recentPosts = 0;
       }
 
       // Check if account already exists
-      let account = await this.accountRepo.findOne({ where: { username: name }});
+      let account = await this.accountRepo.findOne({
+        where: { username: name },
+      });
       if (account) {
         // Update access token if account exists
         account.accessToken = accessToken;
@@ -285,10 +310,10 @@ export class AppService {
           username: name,
           profileUrl: `https://linkedin.com/in/${linkedinId}`,
           status: 'Connected',
-          accessToken: accessToken // Saving the access token securely
+          accessToken: accessToken, // Saving the access token securely
         });
         account = await this.accountRepo.save(account);
-        
+
         // Seed initial real stats for the new account (no mock data)
         const today = new Date();
         const dateStr = today.toISOString().split('T')[0];
@@ -300,15 +325,20 @@ export class AppService {
           views: views,
           followers: followers,
           recentPosts: recentPosts,
-          account: account
+          account: account,
         });
         await this.analyticsRepo.save([initialAnalytics]);
       }
-      
+
       // Redirect back to dashboard
-      return res.redirect(`http://localhost:3000/dashboard?token=${accessToken}&status=success`);
+      return res.redirect(
+        `http://localhost:3000/dashboard?token=${accessToken}&status=success`,
+      );
     } catch (error: any) {
-      console.error('LinkedIn OAuth Error:', error.response?.data || error.message);
+      console.error(
+        'LinkedIn OAuth Error:',
+        error.response?.data || error.message,
+      );
       return res.status(500).send('OAuth failed');
     }
   }
@@ -317,7 +347,9 @@ export class AppService {
     const { email, currentPassword, newPassword } = body;
 
     if (email === 'admin') {
-      const adminUser = await this.userRepo.findOne({ where: { email: 'admin' } });
+      const adminUser = await this.userRepo.findOne({
+        where: { email: 'admin' },
+      });
       if (adminUser) {
         if (adminUser.password !== currentPassword) {
           throw new UnauthorizedException('Invalid current password');
@@ -333,7 +365,7 @@ export class AppService {
             role: 'super_admin',
             name: 'Super Admin',
             companyName: 'System',
-            phone: '0000000000'
+            phone: '0000000000',
           });
           await this.userRepo.save(newAdmin);
           return { success: true };
@@ -347,7 +379,7 @@ export class AppService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    
+
     if (user.password !== currentPassword) {
       throw new UnauthorizedException('Invalid current password');
     }

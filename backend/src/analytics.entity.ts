@@ -36,6 +36,6 @@ export class Analytics {
   @Column({ nullable: true })
   lastCollectionTime: string;
 
-  @ManyToOne(() => Account, account => account.analytics)
+  @ManyToOne(() => Account, (account) => account.analytics)
   account: Account;
 }
