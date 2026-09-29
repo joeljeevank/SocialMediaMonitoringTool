@@ -13,8 +13,10 @@ import {
   Eye, 
   EyeOff, 
   AlertCircle, 
-  KeyRound,
-  Plus
+  KeyRound, 
+  Plus, 
+  ShieldCheck, 
+  Building2 
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 
@@ -102,8 +104,8 @@ export default function ProfileDashboard() {
   useEffect(() => {
     setUserDetails({
       name: localStorage.getItem('user_name') || 'Administrator',
-      companyName: localStorage.getItem('company_name') || 'Enterprise Suite',
-      companyRole: localStorage.getItem('company_role') || 'Head of Analytics',
+      companyName: localStorage.getItem('company_name') || 'Enterprise Analytics',
+      companyRole: localStorage.getItem('company_role') || 'Lead Strategist',
       role: localStorage.getItem('user_role') || 'super_admin',
       email: localStorage.getItem('user_email') || 'admin@example.com'
     });
@@ -166,11 +168,14 @@ export default function ProfileDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Profile Header Card */}
-      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white font-bold text-xl flex items-center justify-center shrink-0 shadow-sm">
+      {/* Profile Header Hero Card */}
+      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm dark:shadow-xl relative overflow-hidden">
+        {/* Subtle accent corner glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 text-white font-bold text-2xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-600/20 border-2 border-white/20">
               {userDetails.name.charAt(0) || 'A'}
             </div>
             <div>
@@ -178,17 +183,25 @@ export default function ProfileDashboard() {
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                   {userDetails.name}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 capitalize">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 capitalize">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
                   {userDetails.role.replace('_', ' ')}
                 </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Active
+                </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+              <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 flex-wrap">
                 <span>{userDetails.email}</span>
                 <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span>{userDetails.companyName}</span>
+                <span className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                  {userDetails.companyName}
+                </span>
                 <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span className="text-slate-600 dark:text-slate-300 font-medium">{userDetails.companyRole}</span>
-              </p>
+                <span className="text-indigo-600 dark:text-indigo-400 font-medium">{userDetails.companyRole}</span>
+              </div>
             </div>
           </div>
 
@@ -196,20 +209,20 @@ export default function ProfileDashboard() {
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="rounded-xl border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold px-4 py-2 gap-2 shrink-0 cursor-pointer"
+                className="rounded-2xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold px-4 py-2.5 gap-2 shrink-0 shadow-2xs cursor-pointer"
               >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Account Settings</span>
+                <Settings className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                <span>Account Security</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+            <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl">
               <div className="mb-4">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <KeyRound className="w-5 h-5 text-indigo-600" />
                   Security & Password
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Update your authentication password for {userDetails.email}
+                  Update credentials for {userDetails.email}
                 </p>
               </div>
 
@@ -239,7 +252,7 @@ export default function ProfileDashboard() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter current password"
-                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 rounded-lg"
+                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#080c14] border-slate-200 dark:border-slate-700 rounded-xl"
                       required
                     />
                     <button
@@ -263,7 +276,7 @@ export default function ProfileDashboard() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Minimum 6 characters"
-                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 rounded-lg"
+                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#080c14] border-slate-200 dark:border-slate-700 rounded-xl"
                       required
                     />
                     <button
@@ -287,7 +300,7 @@ export default function ProfileDashboard() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repeat new password"
-                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 rounded-lg"
+                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#080c14] border-slate-200 dark:border-slate-700 rounded-xl"
                       required
                     />
                     <button
@@ -305,14 +318,14 @@ export default function ProfileDashboard() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsSettingsOpen(false)}
-                    className="text-xs h-9 px-4 rounded-lg"
+                    className="text-xs h-9 px-4 rounded-xl"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={passwordLoading}
-                    className="text-xs h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                    className="text-xs h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl"
                   >
                     {passwordLoading ? 'Saving...' : 'Update Password'}
                   </Button>
@@ -324,23 +337,23 @@ export default function ProfileDashboard() {
       </div>
 
       {/* Connected LinkedIn Accounts Section */}
-      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
               in
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Connected LinkedIn Accounts
+                Connected LinkedIn Profiles
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Monitored executive profiles and company pages ({accounts.length})
+                Active tracked executive profiles and public pages ({accounts.length})
               </p>
             </div>
           </div>
           <Link href="/dashboard">
-            <Button className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer">
+            <Button className="h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold gap-1.5 shadow-xs cursor-pointer">
               <Plus className="w-3.5 h-3.5" />
               <span>Connect Account</span>
             </Button>
@@ -348,24 +361,24 @@ export default function ProfileDashboard() {
         </div>
 
         {accounts.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
+          <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30">
             <p className="text-xs text-slate-500 dark:text-slate-400">No LinkedIn accounts connected yet.</p>
-            <Link href="/dashboard" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline mt-1 inline-block">
+            <Link href="/dashboard" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline mt-1.5 inline-block">
               Add your first LinkedIn profile &rarr;
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {accounts.map((acc) => {
               const latestAnalytics = acc.analytics && acc.analytics.length > 0 ? acc.analytics[0] : null;
               return (
                 <div 
                   key={acc.id} 
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a29] hover:border-blue-500/40 transition-all card-hover-effect space-y-3"
+                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a29] hover:border-blue-500/50 transition-all card-hover-effect space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
                         {acc.username.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -374,7 +387,7 @@ export default function ProfileDashboard() {
                         </p>
                         <span className="inline-flex items-center gap-1 text-[10px] text-slate-400">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span>Active Monitoring</span>
+                          <span>Active Stream</span>
                         </span>
                       </div>
                     </div>
@@ -385,13 +398,13 @@ export default function ProfileDashboard() {
 
                   <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs">
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Followers</span>
-                      <span className="font-bold text-slate-900 dark:text-white">
+                      <span className="text-[10px] text-slate-400 block font-medium">Followers</span>
+                      <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">
                         {latestAnalytics?.followers ? latestAnalytics.followers.toLocaleString() : '—'}
                       </span>
                     </div>
                     <Link href={`/dashboard/${acc.id}`}>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 rounded-lg gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2.5 rounded-lg gap-1 font-semibold">
                         <span>Analytics</span>
                         <ArrowRight className="w-3 h-3" />
                       </Button>
@@ -405,11 +418,11 @@ export default function ProfileDashboard() {
       </div>
 
       {/* Connected YouTube Channels Section */}
-      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-              <YoutubeIcon className="w-4 h-4" />
+      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <YoutubeIcon className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
@@ -421,7 +434,7 @@ export default function ProfileDashboard() {
             </div>
           </div>
           <Link href="/dashboard/youtube">
-            <Button className="h-8 px-3.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer">
+            <Button className="h-8 px-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold gap-1.5 shadow-xs cursor-pointer">
               <Plus className="w-3.5 h-3.5" />
               <span>Connect Channel</span>
             </Button>
@@ -429,18 +442,18 @@ export default function ProfileDashboard() {
         </div>
 
         {channels.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
+          <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30">
             <p className="text-xs text-slate-500 dark:text-slate-400">No YouTube channels connected yet.</p>
-            <Link href="/dashboard/youtube" className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline mt-1 inline-block">
+            <Link href="/dashboard/youtube" className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline mt-1.5 inline-block">
               Track a YouTube channel or sign in with Google &rarr;
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {channels.map((ch) => (
               <div 
                 key={ch.id} 
-                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a29] hover:border-red-500/40 transition-all card-hover-effect space-y-3"
+                className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a29] hover:border-red-500/50 transition-all card-hover-effect space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -448,10 +461,10 @@ export default function ProfileDashboard() {
                       <img 
                         src={ch.thumbnailUrl} 
                         alt={ch.title} 
-                        className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0" 
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs" 
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-red-600/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-red-600/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
                         YT
                       </div>
                     )}
@@ -475,13 +488,13 @@ export default function ProfileDashboard() {
 
                 <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Subscribers</span>
-                    <span className="font-bold text-slate-900 dark:text-white">
+                    <span className="text-[10px] text-slate-400 block font-medium">Subscribers</span>
+                    <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">
                       {ch.subscribers ? ch.subscribers.toLocaleString() : '—'}
                     </span>
                   </div>
                   <Link href={`/dashboard/youtube`}>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 px-2 rounded-lg gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 px-2.5 rounded-lg gap-1 font-semibold">
                       <span>Analytics</span>
                       <ArrowRight className="w-3 h-3" />
                     </Button>
