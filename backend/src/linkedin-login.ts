@@ -1,20 +1,38 @@
 import { chromium } from 'playwright';
 import * as path from 'path';
 
+import * as fs from 'fs';
+
 async function setupLogin() {
-  const userDataDir = path.resolve(__dirname, '..', '.linkedin-browser-profile');
+  const userDataDir = path.resolve(
+    process.cwd(),
+    '.linkedin-browser-profile',
+  );
 
   console.log('----------------------------------------------------');
   console.log('Launching LinkedIn Login Setup...');
   console.log(`Using Profile Directory: ${userDataDir}`);
   console.log('----------------------------------------------------');
 
+  // Clean stale locks if any
+  const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'lockfile'];
+  for (const file of lockFiles) {
+    const lockPath = path.join(userDataDir, file);
+    if (fs.existsSync(lockPath)) {
+      try { fs.unlinkSync(lockPath); } catch (e) {}
+    }
+    const defaultLockPath = path.join(userDataDir, 'Default', file);
+    if (fs.existsSync(defaultLockPath)) {
+      try { fs.unlinkSync(defaultLockPath); } catch (e) {}
+    }
+  }
+
   const context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
     viewport: { width: 1280, height: 800 },
   });
 
-  const page = context.pages()[0] || await context.newPage();
+  const page = context.pages()[0] || (await context.newPage());
 
   await page.goto('https://www.linkedin.com/login', {
     waitUntil: 'domcontentloaded',
@@ -52,19 +70,20 @@ async function setupLogin() {
       }
 
       // Check the page for common authenticated LinkedIn indicators.
-      const authenticatedIndicator = await page.evaluate(() => {
-        const text = document.body?.innerText?.toLowerCase() || '';
+      const authenticatedIndicator = await page
+        .evaluate(() => {
+          const text = document.body?.innerText?.toLowerCase() || '';
 
-        const hasProfileMenu =
-          !!document.querySelector(
+          const hasProfileMenu = !!document.querySelector(
             '[data-testid="nav-profile"], [aria-label*="Me" i], [aria-label*="profile" i]',
           );
 
-        // 'home' is too generic and might appear in footers of logged-out pages.
-        const hasFeed = text.includes('start a post');
+          // 'home' is too generic and might appear in footers of logged-out pages.
+          const hasFeed = text.includes('start a post');
 
-        return hasProfileMenu || hasFeed;
-      }).catch(() => false);
+          return hasProfileMenu || hasFeed;
+        })
+        .catch(() => false);
 
       if (authenticatedIndicator) {
         authenticated = true;
@@ -79,10 +98,7 @@ async function setupLogin() {
 
       // If the URL is a normal LinkedIn authenticated page,
       // consider it a possible authenticated state.
-      if (
-        url.startsWith('https://www.linkedin.com/') &&
-        !isLoginPage
-      ) {
+      if (url.startsWith('https://www.linkedin.com/') && !isLoginPage) {
         console.log('Normal LinkedIn page detected. Checking session...');
 
         // Give LinkedIn a little more time to render the authenticated UI.
@@ -117,15 +133,13 @@ async function setupLogin() {
       'Login successful! Session has been saved to the persistent profile.',
     );
 
-    console.log(
-      '\nYou can now use this profile for the LinkedIn collector.',
-    );
+    console.log('\nYou can now use this profile for the LinkedIn collector.');
+
+    console.log(`Profile: ${userDataDir}`);
 
     console.log(
-      `Profile: ${userDataDir}`,
+      '\nLeaving browser open for 60 seconds just in case you need to finish anything...',
     );
-
-    console.log('\nLeaving browser open for 60 seconds just in case you need to finish anything...');
 
     await page.waitForTimeout(60000);
   } else {
@@ -133,9 +147,7 @@ async function setupLogin() {
     console.log('LOGIN WAS NOT DETECTED');
     console.log('--------------------------------------------');
     console.log(`Final URL: ${page.url()}`);
-    console.log(
-      'The LinkedIn browser session was not confirmed.',
-    );
+    console.log('The LinkedIn browser session was not confirmed.');
   }
 
   await context.close();

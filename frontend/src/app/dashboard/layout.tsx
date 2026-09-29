@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Shield,
-  Home
+  Home,
+  Settings
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
@@ -26,6 +27,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('Administrator');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [optimisticPathname, setOptimisticPathname] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
@@ -43,7 +47,74 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.prefetch('/dashboard/reports');
     router.prefetch('/dashboard/users');
     router.prefetch('/dashboard/users/add');
+    router.prefetch('/dashboard/settings');
   }, [router]);
+
+  // Clear optimistic pathname when navigation completes
+  useEffect(() => {
+    setOptimisticPathname(null);
+    setIsNavigating(false);
+  }, [pathname]);
+
+  const activePath = optimisticPathname ?? pathname;
+
+  const navItems: Array<{ href: string; label: string; icon: any; active: boolean; badge?: string }> = [
+    {
+      href: '/dashboard',
+      label: 'LinkedIn Overview',
+      icon: LayoutDashboard,
+      active: activePath === '/dashboard',
+    },
+    {
+      href: '/dashboard/youtube',
+      label: 'YouTube Analytics',
+      icon: YoutubeIcon,
+      active: activePath.startsWith('/dashboard/youtube'),
+    },
+    {
+      href: '/dashboard/profile',
+      label: 'My Profile',
+      icon: User,
+      active: activePath === '/dashboard/profile',
+    },
+    ...(userRole === 'super_admin' ? [
+      {
+        href: '/dashboard/users',
+        label: 'User Management',
+        icon: Users,
+        active: activePath === '/dashboard/users',
+      },
+    ] : []),
+    {
+      href: '/dashboard/reports',
+      label: 'Reports & Export',
+      icon: FileText,
+      active: activePath === '/dashboard/reports',
+    },
+    {
+      href: '/dashboard/settings',
+      label: 'Account Settings',
+      icon: Settings,
+      active: activePath === '/dashboard/settings',
+    },
+  ];
+
+  const prefetchRoute = (href: string) => {
+    try {
+      router.prefetch(href);
+    } catch {}
+  };
+
+  const handleNavClick = (href: string) => {
+    setMobileMenuOpen(false);
+    if (href !== pathname) {
+      setOptimisticPathname(href);
+      setIsNavigating(true);
+      startTransition(() => {
+        router.push(href);
+      });
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
@@ -55,74 +126,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/');
   };
 
-  // My Profile is #1 FIRST in navigation
-  const navItems = [
-    {
-      href: '/dashboard/profile',
-      label: 'My Profile',
-      icon: User,
-      active: pathname === '/dashboard/profile',
-      activeBg: 'bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold border-indigo-600 dark:border-indigo-500',
-      iconBg: 'text-indigo-600 dark:text-indigo-400',
-    },
-    {
-      href: '/dashboard',
-      label: 'LinkedIn Overview',
-      icon: LayoutDashboard,
-      active: pathname === '/dashboard' || (pathname.startsWith('/dashboard/') && !['/dashboard/youtube', '/dashboard/profile', '/dashboard/users', '/dashboard/reports', '/dashboard/settings', '/dashboard/company'].some(p => pathname.startsWith(p))),
-      activeBg: 'bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold border-blue-600 dark:border-blue-500',
-      iconBg: 'text-blue-600 dark:text-blue-400',
-    },
-    {
-      href: '/dashboard/youtube',
-      label: 'YouTube Analytics',
-      icon: YoutubeIcon,
-      active: pathname.startsWith('/dashboard/youtube'),
-      badge: 'Live',
-      activeBg: 'bg-red-50/80 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold border-red-600 dark:border-red-500',
-      iconBg: 'text-red-600 dark:text-red-400',
-    },
-    ...(userRole === 'super_admin' ? [
-      {
-        href: '/dashboard/users',
-        label: 'User Management',
-        icon: Users,
-        active: pathname === '/dashboard/users',
-        activeBg: 'bg-purple-50/80 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-semibold border-purple-600 dark:border-purple-500',
-        iconBg: 'text-purple-600 dark:text-purple-400',
-      },
-      {
-        href: '/dashboard/users/add',
-        label: 'Add New User',
-        icon: UserPlus,
-        active: pathname === '/dashboard/users/add',
-        activeBg: 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold border-emerald-600 dark:border-emerald-500',
-        iconBg: 'text-emerald-600 dark:text-emerald-400',
-      },
-    ] : []),
-    {
-      href: '/dashboard/reports',
-      label: 'Reports & Export',
-      icon: FileText,
-      active: pathname === '/dashboard/reports',
-      activeBg: 'bg-amber-50/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold border-amber-600 dark:border-amber-500',
-      iconBg: 'text-amber-600 dark:text-amber-400',
-    },
-  ];
-
   const getPageTitle = () => {
-    if (pathname === '/dashboard/profile') return 'My Profile';
-    if (pathname === '/dashboard') return 'LinkedIn Overview';
-    if (pathname.startsWith('/dashboard/youtube')) return 'YouTube Analytics';
-    if (pathname === '/dashboard/users') return 'User Management';
-    if (pathname === '/dashboard/users/add') return 'Add System User';
-    if (pathname === '/dashboard/reports') return 'Analytics Reports';
-    if (pathname.startsWith('/dashboard/')) return 'Profile Analytics';
+    if (activePath === '/dashboard') return 'LinkedIn Monitoring';
+    if (activePath.startsWith('/dashboard/youtube')) return 'YouTube Intelligence';
+    if (activePath === '/dashboard/profile') return 'Account Profile';
+    if (activePath === '/dashboard/users') return 'User Management';
+    if (activePath === '/dashboard/users/add') return 'Add System User';
+    if (activePath === '/dashboard/reports') return 'Analytics Reports';
+    if (activePath === '/dashboard/settings') return 'Platform Settings';
+    if (activePath.startsWith('/dashboard/')) return 'Profile Analytics';
     return 'Dashboard';
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden select-none">
+    <div className="flex h-screen bg-slate-50 dark:bg-[#06080e] p-3 sm:p-4 md:p-6 gap-4 sm:gap-6 relative overflow-hidden select-none">
+      {/* Background ambient lighting */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 dark:bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 dark:bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
+
+      {/* Top Navigation Loading Indicator */}
+      {isNavigating && (
+        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 animate-pulse shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
+      )}
+
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
         <div 
@@ -137,9 +163,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }`}>
         {/* Brand Header */}
         <div className="h-16 px-5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between">
-          <Link href="/dashboard/profile" prefetch={true} className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
-              <BarChart3 className="w-4 h-4" />
+          <Link 
+            href="/dashboard" 
+            prefetch={true} 
+            onMouseEnter={() => prefetchRoute('/dashboard')}
+            onFocus={() => prefetchRoute('/dashboard')}
+            onClick={() => handleNavClick('/dashboard')}
+            className="flex items-center gap-3 group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-base shadow-md shadow-cyan-500/25 group-hover:scale-105 transition-transform">
+              <BarChart3 className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -176,16 +209,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 key={item.href}
                 href={item.href}
                 prefetch={true}
-                onMouseEnter={() => router.prefetch(item.href)}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                onMouseEnter={() => prefetchRoute(item.href)}
+                onFocus={() => prefetchRoute(item.href)}
+                onPointerDown={() => prefetchRoute(item.href)}
+                onTouchStart={() => prefetchRoute(item.href)}
+                onClick={() => handleNavClick(item.href)}
+                className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                   item.active
-                    ? `${item.activeBg} border-l-2 shadow-2xs`
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 hover:text-slate-900 dark:hover:text-white border-l-2 border-transparent'
+                    ? 'bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-cyan-300 font-bold border-indigo-600 dark:border-cyan-400 border-l-2 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-cyan-300 border-l-2 border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={`w-4 h-4 ${item.iconBg}`} />
+                  <Icon className={`w-4 h-4 transition-colors ${
+                    item.active 
+                      ? 'text-indigo-600 dark:text-cyan-400' 
+                      : 'text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-cyan-300'
+                  }`} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
@@ -243,7 +283,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <Link href="/dashboard/profile" className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hidden sm:flex items-center gap-1">
+              <Link href="/dashboard" className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hidden sm:flex items-center gap-1">
                 <Home className="w-3.5 h-3.5" />
                 <span>Dashboard</span>
               </Link>
@@ -254,12 +294,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Telemetry Active</span>
-            </div>
-          </div>
+
         </header>
 
         {/* Dynamic Page Scroll Area */}

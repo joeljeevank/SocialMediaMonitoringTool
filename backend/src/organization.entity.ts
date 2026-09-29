@@ -19,9 +19,9 @@ export class Organization {
   @Column({ nullable: true })
   website: string;
 
-  @ManyToOne(() => Account, account => account.organizations)
+  @ManyToOne(() => Account, (account) => account.organizations)
   admin: Account;
 
-  @OneToMany(() => Post, post => post.organization)
+  @OneToMany(() => Post, (post) => post.organization)
   posts: Post[];
 }
