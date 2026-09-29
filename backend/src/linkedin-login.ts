@@ -12,6 +12,15 @@ async function setupLogin() {
   const context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
     viewport: { width: 1280, height: 800 },
+    ignoreDefaultArgs: ['--enable-automation'],
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-infobars',
+      '--disable-features=IsolateOrigins,site-per-process',
+    ],
   });
 
   const page = context.pages()[0] || await context.newPage();

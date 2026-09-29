@@ -143,7 +143,17 @@ export class CollectorService {
     
     try {
       context = await chromium.launchPersistentContext(userDataDir, {
-        headless: false, // LinkedIn heavily blocks headless: true, so we must keep it visible (but you don't need to login!)
+        headless: false,
+        viewport: { width: 1280, height: 800 },
+        ignoreDefaultArgs: ['--enable-automation'],
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        args: [
+          '--disable-blink-features=AutomationControlled',
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-infobars',
+          '--disable-features=IsolateOrigins,site-per-process',
+        ],
       });
 
       page = await context.newPage();
