@@ -4,27 +4,27 @@
 
 @layer base {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
+    --background: #f4f6fb;
+    --foreground: #090e17;
     --card: #ffffff;
-    --card-foreground: #0f172a;
-    --border: #e2e8f0;
+    --card-foreground: #090e17;
+    --border: #e2e8f4;
     --muted: #64748b;
     --primary: #4f46e5;
     --primary-foreground: #ffffff;
-    --ring: rgba(79, 70, 229, 0.35);
+    --ring: rgba(79, 70, 229, 0.4);
   }
 
   .dark {
-    --background: #080c14;
-    --foreground: #f1f5f9;
-    --card: #0f172a;
-    --card-foreground: #f1f5f9;
-    --border: #1e293b;
+    --background: #06090f;
+    --foreground: #f8fafc;
+    --card: #0c121e;
+    --card-foreground: #f8fafc;
+    --border: rgba(255, 255, 255, 0.08);
     --muted: #94a3b8;
     --primary: #6366f1;
     --primary-foreground: #ffffff;
-    --ring: rgba(99, 102, 241, 0.35);
+    --ring: rgba(99, 102, 241, 0.4);
   }
 
   * {
@@ -41,68 +41,119 @@
   }
 }
 
-/* Ambient Subtle Lighting */
+/* Next-Gen Cyber-Clean Canvas with Precision Grid & Subtle Lighting */
 body {
   background-color: var(--background);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.03) 0px, transparent 50%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.08), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(14, 165, 233, 0.05), transparent 60%);
   background-attachment: fixed;
 }
 
 .dark body {
-  background-color: #080c14;
+  background-color: #06090f;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 45%),
-    radial-gradient(at 100% 0%, rgba(14, 165, 233, 0.05) 0px, transparent 40%),
-    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(99, 102, 241, 0.15), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(6, 182, 212, 0.08), transparent 60%),
+    radial-gradient(ellipse 70% 60% at 0% 100%, rgba(239, 68, 68, 0.06), transparent 70%);
   background-attachment: fixed;
 }
 
-/* Polished Interactive Card Transitions */
-.card-hover-effect {
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+/* Glassmorphism Card System */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 244, 0.9);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
 }
 
-.card-hover-effect:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+.dark .glass-panel {
+  background: rgba(12, 18, 30, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
-.dark .card-hover-effect:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px -3px rgba(99, 102, 241, 0.15);
-}
-
-/* Metric Pulse Dot */
-.live-pulse {
+/* Dynamic Interactive Cards with Border Illumination */
+.glow-card {
   position: relative;
-}
-.live-pulse::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 9999px;
-  background-color: inherit;
-  opacity: 0.75;
-  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.6); opacity: 0; }
-  100% { transform: scale(1.6); opacity: 0; }
+.glow-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 14px 30px -4px rgba(0, 0, 0, 0.08), 0 0 15px -2px rgba(99, 102, 241, 0.1);
 }
 
-/* Tactile Button Feedback */
+.dark .glow-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6), 0 0 24px -2px rgba(99, 102, 241, 0.25);
+}
+
+/* Platform Accent Glows */
+.glow-card-linkedin:hover {
+  border-color: rgba(2, 132, 199, 0.6) !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6), 0 0 24px -2px rgba(2, 132, 199, 0.3) !important;
+}
+
+.glow-card-youtube:hover {
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6), 0 0 24px -2px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Gradient Text Headers */
+.gradient-heading {
+  background: linear-gradient(135deg, #090e17 0%, #475569 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dark .gradient-heading {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glowing Neon Pills */
+.neon-badge-emerald {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 10px -2px rgba(16, 185, 129, 0.2);
+}
+
+.neon-badge-blue {
+  background: rgba(2, 132, 199, 0.1);
+  color: #38bdf8;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  box-shadow: 0 0 10px -2px rgba(2, 132, 199, 0.2);
+}
+
+.neon-badge-red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 10px -2px rgba(239, 68, 68, 0.2);
+}
+
+.neon-badge-indigo {
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 10px -2px rgba(99, 102, 241, 0.2);
+}
+
+/* Tactile Click Feedback */
 button:active:not(:disabled), 
 [role="button"]:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.975);
 }
 
-/* Clean Minimal Scrollbar */
+/* Minimalist Dark Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -118,20 +169,19 @@ button:active:not(:disabled),
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.18);
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(99, 102, 241, 0.55);
+  background-color: rgba(99, 102, 241, 0.6);
 }
 
-/* Custom Text Selection */
+/* Smooth Universal Selection */
 ::selection {
-  background-color: rgba(99, 102, 241, 0.28);
+  background-color: rgba(99, 102, 241, 0.35);
   color: inherit;
 }
 
-/* Universal Pointer Standards */
 button, [role="button"], a, select {
   cursor: pointer;
 }

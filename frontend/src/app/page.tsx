@@ -16,7 +16,8 @@ import {
   AlertCircle, 
   Loader2, 
   ArrowRight, 
-  Shield 
+  Shield,
+  Radio
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 
@@ -36,7 +37,7 @@ export default function LoginPage() {
 
     const cleanUsername = username.trim();
     if (!cleanUsername || !password) {
-      setError('Please enter both your username and password.');
+      setError('Please enter your username and password.');
       setLoading(false);
       return;
     }
@@ -62,56 +63,66 @@ export default function LoginPage() {
         setError(errData.message || 'Invalid username or password.');
       }
     } catch {
-      setError('Unable to reach authentication server. Please ensure the backend service is active.');
+      setError('Unable to reach authentication server. Please verify the backend service is running on port 3001.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-slate-50 dark:bg-[#080c14] text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="min-h-screen w-full flex flex-col justify-between text-slate-900 dark:text-slate-100 relative overflow-hidden transition-colors">
+      {/* Dynamic Background Ambient Blobs */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-indigo-600/15 via-blue-500/10 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 right-10 w-[450px] h-[300px] bg-gradient-to-tl from-cyan-500/10 via-emerald-500/5 to-transparent blur-3xl pointer-events-none" />
+
       {/* Top Header Navigation */}
-      <header className="w-full px-6 py-4 flex items-center justify-between border-b border-slate-200/70 dark:border-slate-850 bg-white/70 dark:bg-[#0f172a]/70 backdrop-blur-md">
+      <header className="w-full px-6 py-4 flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 glass-panel relative z-20">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-bold shadow-xs">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
             <BarChart3 className="w-5 h-5" />
           </div>
           <div>
             <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-              SocialPulse <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">PRO</span>
+              SocialPulse
+              <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-blue-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                PRO 2.0
+              </span>
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Telemetry Engine Live</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shadow-xs">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>Live Collector Engine</span>
           </div>
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Center Authentication Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6">
-        <div className="w-full max-w-[440px]">
+      {/* Center Authentication Card */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6 relative z-10">
+        <div className="w-full max-w-[430px]">
           {/* Main Card */}
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-2xl dark:shadow-black/60 relative overflow-hidden">
-            {/* Subtle top accent bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-blue-500 to-red-500" />
-
+          <div className="glass-panel rounded-3xl p-7 sm:p-9 shadow-2xl relative overflow-hidden border border-slate-200/90 dark:border-white/10">
             {/* Header */}
-            <div className="mb-6 pt-1">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/30 mb-3">
+                <Radio className="w-6 h-6 animate-pulse" />
+              </div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Sign in to Dashboard
+                Intelligence Command
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Access your real-time social intelligence and audience telemetry
+                Enter your credentials to access social telemetry
               </p>
             </div>
 
-            {/* Role Tab Switcher */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl mb-5 text-xs font-medium border border-slate-200/60 dark:border-slate-700/60">
+            {/* Role Switcher */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100/90 dark:bg-black/40 rounded-2xl mb-5 text-xs font-semibold border border-slate-200/80 dark:border-white/10">
               <button
                 type="button"
                 onClick={() => {
@@ -120,12 +131,12 @@ export default function LoginPage() {
                 }}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   role === 'admin'
-                    ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white font-semibold shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-md'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <Shield className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Administrator</span>
+                <Shield className="w-3.5 h-3.5" />
+                <span>Super Admin</span>
               </button>
               <button
                 type="button"
@@ -135,18 +146,18 @@ export default function LoginPage() {
                 }}
                 className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   role === 'manager'
-                    ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white font-semibold shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-md'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <User className="w-3.5 h-3.5 text-blue-500" />
-                <span>Account Manager</span>
+                <User className="w-3.5 h-3.5" />
+                <span>Manager</span>
               </button>
             </div>
 
-            {/* Error Message */}
+            {/* Error Banner */}
             {error && (
-              <div className="mb-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+              <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
@@ -166,7 +177,7 @@ export default function LoginPage() {
                     placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 h-10 bg-slate-50 dark:bg-[#080c14] border-slate-200 dark:border-slate-700 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
+                    className="pl-10 h-10 bg-slate-50/80 dark:bg-black/50 border-slate-200 dark:border-white/10 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                     required
                   />
                 </div>
@@ -184,7 +195,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-10 bg-slate-50 dark:bg-[#080c14] border-slate-200 dark:border-slate-700 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
+                    className="pl-10 pr-10 h-10 bg-slate-50/80 dark:bg-black/50 border-slate-200 dark:border-white/10 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                     required
                   />
                   <button
@@ -202,35 +213,35 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer mt-2"
+                className="w-full h-11 bg-gradient-to-r from-indigo-600 via-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs rounded-2xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer mt-3"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Authenticating...</span>
+                    <span>Verifying session...</span>
                   </>
                 ) : (
                   <>
-                    <span>Sign In to SocialPulse</span>
+                    <span>Enter Command Center</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </Button>
             </form>
 
-            {/* Platform Badges */}
-            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5 text-[11px]">
+            {/* Bottom Platform Badges */}
+            <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5 text-[11px] font-medium">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>256-bit SSL Protection</span>
+                <span>Encrypted Telemetry</span>
               </span>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                  <span className="w-4 h-4 rounded bg-blue-600/15 text-blue-600 flex items-center justify-center font-bold text-[9px]">in</span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                  <span className="w-4 h-4 rounded bg-sky-500/20 text-sky-500 flex items-center justify-center font-bold text-[9px]">in</span>
                   LinkedIn
                 </span>
                 <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
                   <YoutubeIcon className="w-3.5 h-3.5 text-red-500" />
                   YouTube
                 </span>
@@ -241,8 +252,8 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-4 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/50 dark:border-slate-850">
-        <span>SocialPulse Analytics &copy; {new Date().getFullYear()} • Enterprise Intelligence Hub</span>
+      <footer className="w-full py-4 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-white/10 relative z-10">
+        <span>SocialPulse Analytics &copy; {new Date().getFullYear()} • High-Speed Intelligence Platform</span>
       </footer>
     </div>
   );
