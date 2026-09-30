@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { CheckCircle2, AlertCircle, ArrowLeft, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function AddUserPage() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function AddUserPage() {
     setManagerSuccess('');
     setManagerError('');
     try {
-      const res = await fetch('http://localhost:3001/managers', {
+      const res = await fetch(`${API_BASE_URL}/managers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -53,6 +53,7 @@ import {
   Line
 } from 'recharts';
 import axios from 'axios';
+import { API_BASE_URL } from '@/lib/api-config';
 
 type Channel = {
   id: number;
@@ -203,7 +204,7 @@ function YouTubeDashboardContent() {
   // Fetch YouTube API & OAuth Config
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/config');
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/config`);
       setConfig(res.data);
       setOauthConfigured(Boolean(res.data.oauthConfigured));
     } catch (e) {
@@ -214,7 +215,7 @@ function YouTubeDashboardContent() {
   // Fetch OAuth Status & URL
   const checkOAuthStatus = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/auth/url');
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/auth/url`);
       setOauthConfigured(Boolean(res.data.configured));
       setOauthUrl(res.data.url || '');
     } catch (e) {
@@ -226,7 +227,7 @@ function YouTubeDashboardContent() {
   // Fetch Channels
   const fetchChannels = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/channels');
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/channels`);
       setChannels(res.data || []);
     } catch (e) {
       console.error('Failed to fetch channels', e);
@@ -240,7 +241,7 @@ function YouTubeDashboardContent() {
       return;
     }
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/overview', {
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/overview`, {
         params: { channelId: selectedChannelId, range: dateRange },
       });
       setOverview(res.data);
@@ -256,7 +257,7 @@ function YouTubeDashboardContent() {
       return;
     }
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/analytics', {
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/analytics`, {
         params: { channelId: selectedChannelId, range: dateRange },
       });
       setTimeseries(res.data || []);
@@ -277,7 +278,7 @@ function YouTubeDashboardContent() {
     }
     setVideosLoading(true);
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/videos', {
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/videos`, {
         params: {
           channelId: selectedChannelId,
           search: videoSearch,
@@ -377,13 +378,13 @@ function YouTubeDashboardContent() {
     setSyncing(true);
     try {
       if (!selectedChannelId) {
-        const res = await axios.post('http://localhost:3001/api/youtube/sync-all');
+        const res = await axios.post(`${API_BASE_URL}/api/youtube/sync-all`);
         setNotification({
           type: 'success',
           message: `Synchronized ${res.data.syncedCount || 0} YouTube channels successfully!`,
         });
       } else {
-        const res = await axios.post(`http://localhost:3001/api/youtube/channels/${selectedChannelId}/sync`);
+        const res = await axios.post(`${API_BASE_URL}/api/youtube/channels/${selectedChannelId}/sync`);
         setNotification({
           type: 'success',
           message: res.data.message || 'Channel synchronized successfully!',
@@ -409,7 +410,7 @@ function YouTubeDashboardContent() {
 
     setTrackingLoading(true);
     try {
-      const res = await axios.post('http://localhost:3001/api/youtube/channels/track', {
+      const res = await axios.post(`${API_BASE_URL}/api/youtube/channels/track`, {
         identifier: target.trim(),
       });
 
@@ -433,7 +434,7 @@ function YouTubeDashboardContent() {
   };
 
   const handleCopyRedirectUri = () => {
-    const uri = config?.redirectUri || 'http://localhost:3001/api/youtube/auth/callback';
+    const uri = config?.redirectUri || `${API_BASE_URL}/api/youtube/auth/callback`;
     navigator.clipboard.writeText(uri);
     setCopiedRedirectUri(true);
     setTimeout(() => setCopiedRedirectUri(false), 2500);
@@ -443,7 +444,7 @@ function YouTubeDashboardContent() {
   const handleDisconnect = async (id: number, title: string) => {
     if (!window.confirm(`Are you sure you want to disconnect channel "${title}"?`)) return;
     try {
-      await axios.delete(`http://localhost:3001/api/youtube/channels/${id}`);
+      await axios.delete(`${API_BASE_URL}/api/youtube/channels/${id}`);
       setNotification({ type: 'success', message: `Channel "${title}" has been disconnected.` });
       setSelectedChannelId('');
       await Promise.all([fetchChannels(), fetchOverview(), fetchTimeseries(), fetchVideos()]);
@@ -1628,7 +1629,7 @@ function YouTubeDashboardContent() {
                         </button>
                       </div>
                       <code className="block p-2 rounded-xl bg-slate-100 dark:bg-black/40 text-[11px] font-mono text-purple-600 dark:text-purple-400 break-all">
-                        {config?.redirectUri || 'http://localhost:3001/api/youtube/auth/callback'}
+                        {config?.redirectUri || `${API_BASE_URL}/api/youtube/auth/callback`}
                       </code>
                     </div>
 

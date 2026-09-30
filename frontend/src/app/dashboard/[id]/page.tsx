@@ -19,7 +19,6 @@ import {
   RefreshCw, 
   CheckCircle2, 
   ExternalLink,
-  Sparkles,
   Search,
   ArrowUpDown,
   ChevronLeft,
@@ -27,6 +26,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import axios from 'axios';
+import { API_BASE_URL } from '@/lib/api-config';
 
 function cleanPostDate(raw?: string | null) {
   if (!raw) return '-';
@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
     if (!id) return;
     setPostsLoading(true);
     try {
-      const res = await axios.get(`http://localhost:3001/api/linkedin/posts`, {
+      const res = await axios.get(`${API_BASE_URL}/api/linkedin/posts`, {
         params: {
           accountId: id,
           search: postSearch,
@@ -234,7 +234,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await axios.get(`http://localhost:3001/analytics/${id}`);
+        const res = await axios.get(`${API_BASE_URL}/analytics/${id}`);
         setData(res.data);
       } catch (error) {
         console.error('Failed to fetch analytics', error);
@@ -349,7 +349,7 @@ export default function AnalyticsPage() {
     setCollecting(true);
     setCollectionSuccessMsg(null);
     try {
-      const res = await axios.post(`http://localhost:3001/api/linkedin/collect?accountId=${id}`);
+      const res = await axios.post(`${API_BASE_URL}/api/linkedin/collect?accountId=${id}`);
       const result = res.data;
       if (result.status === 'success' || result.success) {
         setSessionSynced(true);
@@ -358,7 +358,7 @@ export default function AnalyticsPage() {
           localStorage.setItem(`scraped_data_${id}`, JSON.stringify(result.data));
         }
         // Refresh analytics and all posts
-        const aRes = await axios.get(`http://localhost:3001/analytics/${id}`);
+        const aRes = await axios.get(`${API_BASE_URL}/analytics/${id}`);
         setData(aRes.data);
         fetchPosts();
         

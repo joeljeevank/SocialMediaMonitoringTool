@@ -11,7 +11,6 @@ import {
   User, 
   Lock, 
   ShieldCheck, 
-  Bell, 
   Key, 
   CheckCircle2, 
   AlertCircle, 
@@ -21,11 +20,10 @@ import {
   RefreshCw,
   Copy,
   Check,
-  Sliders,
-  Sun,
-  Moon
+  Sliders
 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function AccountSettingsPage() {
   // Account Information State
@@ -33,7 +31,6 @@ export default function AccountSettingsPage() {
   const [email, setEmail] = useState('admin@example.com');
   const [companyName, setCompanyName] = useState('Enterprise Suite');
   const [companyRole, setCompanyRole] = useState('Head of Analytics');
-  const [userRole, setUserRole] = useState('super_admin');
   const [profileSuccess, setProfileSuccess] = useState('');
 
   // Password State
@@ -55,14 +52,13 @@ export default function AccountSettingsPage() {
 
   // API Config State
   const [copiedUri, setCopiedUri] = useState(false);
-  const redirectUri = 'http://localhost:3001/api/youtube/auth/callback';
+  const redirectUri = `${API_BASE_URL}/api/youtube/auth/callback`;
 
   useEffect(() => {
     setName(localStorage.getItem('user_name') || 'Administrator');
     setEmail(localStorage.getItem('user_email') || 'admin@example.com');
     setCompanyName(localStorage.getItem('company_name') || 'Enterprise Suite');
     setCompanyRole(localStorage.getItem('company_role') || 'Head of Analytics');
-    setUserRole(localStorage.getItem('user_role') || 'super_admin');
   }, []);
 
   const handleProfileSave = (e: React.FormEvent) => {
@@ -96,7 +92,7 @@ export default function AccountSettingsPage() {
     setPasswordLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const res = await axios.post('http://localhost:3001/auth/change-password', {
+      const res = await axios.post(`${API_BASE_URL}/auth/change-password`, {
         currentPassword,
         newPassword
       }, {

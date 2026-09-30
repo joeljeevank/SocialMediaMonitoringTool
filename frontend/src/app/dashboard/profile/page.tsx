@@ -17,6 +17,7 @@ import {
   Plus
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
+import { API_BASE_URL } from '@/lib/api-config';
 
 type Analytics = {
   likes: number;
@@ -77,7 +78,7 @@ export default function ProfileDashboard() {
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch('http://localhost:3001/accounts');
+      const res = await fetch(`${API_BASE_URL}/accounts`);
       if (res.ok) {
         const data = await res.json();
         setAccounts(data);
@@ -89,7 +90,7 @@ export default function ProfileDashboard() {
 
   const fetchChannels = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/youtube/channels');
+      const res = await fetch(`${API_BASE_URL}/api/youtube/channels`);
       if (res.ok) {
         const data = await res.json();
         setChannels(data);
@@ -132,7 +133,7 @@ export default function ProfileDashboard() {
     setPasswordLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const res = await fetch('http://localhost:3001/auth/change-password', {
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

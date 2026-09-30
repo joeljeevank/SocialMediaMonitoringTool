@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 import axios from 'axios';
+import { API_BASE_URL } from '@/lib/api-config';
 
 type LinkedInAccount = {
   id: number;
@@ -114,7 +115,7 @@ function ReportsContent() {
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const res = await axios.get('http://localhost:3001/accounts');
+        const res = await axios.get(`${API_BASE_URL}/accounts`);
         setAccounts(res.data || []);
       } catch (error) {
         console.error('Failed to fetch LinkedIn accounts', error);
@@ -126,7 +127,7 @@ function ReportsContent() {
   // Fetch YouTube Channels
   const fetchChannels = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/youtube/channels');
+      const res = await axios.get(`${API_BASE_URL}/api/youtube/channels`);
       setChannels(res.data || []);
     } catch (error) {
       console.error('Failed to fetch YouTube channels', error);
@@ -146,7 +147,7 @@ function ReportsContent() {
     }
     setLoadingLinkedIn(true);
     try {
-      const res = await axios.get(`http://localhost:3001/analytics/${accountId}`);
+      const res = await axios.get(`${API_BASE_URL}/analytics/${accountId}`);
       setLinkedInAnalytics(res.data || []);
     } catch (error) {
       console.error('Failed to fetch LinkedIn analytics', error);
@@ -160,13 +161,13 @@ function ReportsContent() {
     setLoadingYouTube(true);
     try {
       const [overviewRes, timeseriesRes, videosRes] = await Promise.all([
-        axios.get('http://localhost:3001/api/youtube/overview', {
+        axios.get(`${API_BASE_URL}/api/youtube/overview`, {
           params: { channelId: selectedYouTubeChannelId, range: youTubeDateRange },
         }),
-        axios.get('http://localhost:3001/api/youtube/analytics', {
+        axios.get(`${API_BASE_URL}/api/youtube/analytics`, {
           params: { channelId: selectedYouTubeChannelId, range: youTubeDateRange },
         }),
-        axios.get('http://localhost:3001/api/youtube/videos', {
+        axios.get(`${API_BASE_URL}/api/youtube/videos`, {
           params: { channelId: selectedYouTubeChannelId, limit: 50, sort: 'publishedAt', order: 'DESC' },
         }),
       ]);

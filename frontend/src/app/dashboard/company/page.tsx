@@ -18,6 +18,7 @@ import {
   TrendingUp 
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function CompanyDashboard() {
   const accountId = 1;
@@ -44,11 +45,11 @@ export default function CompanyDashboard() {
     setLoading(true);
     setErrors([]);
     try {
-      const meRes = await fetch(`http://localhost:3001/api/linkedin/me?accountId=${accountId}`);
+      const meRes = await fetch(`${API_BASE_URL}/api/linkedin/me?accountId=${accountId}`);
       const meData = await meRes.json();
       setMe(meData);
 
-      const orgsRes = await fetch(`http://localhost:3001/api/linkedin/organizations?accountId=${accountId}`);
+      const orgsRes = await fetch(`${API_BASE_URL}/api/linkedin/organizations?accountId=${accountId}`);
       const orgsData = await orgsRes.json();
       
       if (orgsData.error) {
@@ -61,22 +62,22 @@ export default function CompanyDashboard() {
       if (orgsList.length > 0) {
         const selectedOrg = orgsList[0];
         
-        const compRes = await fetch(`http://localhost:3001/api/linkedin/company/${encodeURIComponent(selectedOrg)}?accountId=${accountId}`);
+        const compRes = await fetch(`${API_BASE_URL}/api/linkedin/company/${encodeURIComponent(selectedOrg)}?accountId=${accountId}`);
         const compData = await compRes.json();
         if (compData.error) setErrors(prev => [...prev, { source: 'Company Details', ...compData }]);
         else setCompany(compData);
 
-        const folRes = await fetch(`http://localhost:3001/api/linkedin/company/${encodeURIComponent(selectedOrg)}/followers?accountId=${accountId}`);
+        const folRes = await fetch(`${API_BASE_URL}/api/linkedin/company/${encodeURIComponent(selectedOrg)}/followers?accountId=${accountId}`);
         const folData = await folRes.json();
         if (folData.error) setErrors(prev => [...prev, { source: 'Followers', ...folData }]);
         else setFollowers(folData);
 
-        const statsRes = await fetch(`http://localhost:3001/api/linkedin/company/${encodeURIComponent(selectedOrg)}/page-statistics?accountId=${accountId}`);
+        const statsRes = await fetch(`${API_BASE_URL}/api/linkedin/company/${encodeURIComponent(selectedOrg)}/page-statistics?accountId=${accountId}`);
         const statsData = await statsRes.json();
         if (statsData.error) setErrors(prev => [...prev, { source: 'Page Statistics', ...statsData }]);
         else setPageStats(statsData);
 
-        const postsRes = await fetch(`http://localhost:3001/api/linkedin/company/${encodeURIComponent(selectedOrg)}/posts?accountId=${accountId}`);
+        const postsRes = await fetch(`${API_BASE_URL}/api/linkedin/company/${encodeURIComponent(selectedOrg)}/posts?accountId=${accountId}`);
         const postsData = await postsRes.json();
         if (postsData.error) setErrors(prev => [...prev, { source: 'Recent Posts', ...postsData }]);
         else setPosts(postsData);
