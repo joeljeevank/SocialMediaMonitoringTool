@@ -153,10 +153,23 @@ export class CollectorService {
     this.cleanStaleLocks(userDataDir);
     this.cleanStaleLocks(path.join(userDataDir, 'Default'));
 
+    const isProduction =
+      process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+    const isHeadless =
+      process.env.HEADLESS !== undefined
+        ? process.env.HEADLESS === 'true'
+        : isProduction;
+
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const context = await chromium.launchPersistentContext(userDataDir, {
-          headless: false,
+          headless: isHeadless,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+          ],
         });
         return context;
       } catch (err: any) {
@@ -215,12 +228,43 @@ export class CollectorService {
       }
     }
 
+    const isProduction =
+      process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+    const isHeadless =
+      process.env.HEADLESS !== undefined
+        ? process.env.HEADLESS === 'true'
+        : isProduction;
+
     let context: BrowserContext | null = null;
     let page: Page | null = null;
     let currentStep = 'Initialization';
 
     try {
       context = await this.launchBrowserWithRetry(userDataDir);
+
+      if (process.env.LINKEDIN_LI_AT_COOKIE) {
+        try {
+          await context.addCookies([
+            {
+              name: 'li_at',
+              value: process.env.LINKEDIN_LI_AT_COOKIE.trim(),
+              domain: '.linkedin.com',
+              path: '/',
+              secure: true,
+              httpOnly: true,
+              sameSite: 'None',
+            },
+          ]);
+          console.log(
+            '[CollectorService] Injected LINKEDIN_LI_AT_COOKIE into browser context',
+          );
+        } catch (cookieErr: any) {
+          console.warn(
+            '[CollectorService] Failed to inject LI_AT cookie:',
+            cookieErr.message,
+          );
+        }
+      }
 
       page = await context.newPage();
 
@@ -270,6 +314,14 @@ export class CollectorService {
       console.log('------------------------------\n');
 
       if (!isAuthenticated) {
+        if (isHeadless) {
+          if (context) await context.close();
+          console.log('=== LINKEDIN COLLECTION FAILED ===');
+          throw new BadRequestException(
+            'LinkedIn browser session is not authenticated. Please add or update your LINKEDIN_LI_AT_COOKIE in your Render environment variables.',
+          );
+        }
+
         console.log(
           'Authenticated: NO. Pausing so user can log in manually...',
         );
