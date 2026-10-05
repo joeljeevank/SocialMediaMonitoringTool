@@ -589,19 +589,44 @@ export class CollectorService {
           cleanFinalUrl += '/';
         }
 
-         let postsUrl = '';
-         if (cleanFinalUrl.includes('/company/')) {
-            postsUrl = cleanFinalUrl + 'posts/?feedView=all';
-         } else {
-            // Personal profiles use /recent-activity/shares/ to see ONLY posts authored/shared (not likes/comments on others)
-            postsUrl = cleanFinalUrl + 'recent-activity/shares/';
-         }
-         
-         // Add timestamp to bypass local browser cache if the user just deleted a post
-         const cacheBuster = `?t=${Date.now()}`;
-         postsUrl = postsUrl.includes('?') ? postsUrl + `&t=${Date.now()}` : postsUrl + cacheBuster;
-         
-         await page.goto(postsUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        let candidateUrls: string[] = [];
+        if (cleanFinalUrl.includes('/company/')) {
+          candidateUrls = [
+            cleanFinalUrl + 'posts/?feedView=all',
+            cleanFinalUrl + 'posts/',
+          ];
+        } else {
+          // Personal profiles: try all activity first, then shares, then main profile
+          candidateUrls = [
+            cleanFinalUrl + 'recent-activity/all/',
+            cleanFinalUrl + 'recent-activity/shares/',
+            cleanFinalUrl,
+          ];
+        }
+
+        let navigationSuccessful = false;
+        for (const candidate of candidateUrls) {
+          console.log(`[CollectorService] Trying posts URL: ${candidate}`);
+          try {
+            await page.goto(candidate, {
+              waitUntil: 'domcontentloaded',
+              timeout: 30000,
+            });
+            navigationSuccessful = true;
+            break;
+          } catch (navErr: any) {
+            console.warn(
+              `[CollectorService] Failed navigating to ${candidate}: ${navErr.message}. Trying next candidate...`,
+            );
+            await page.waitForTimeout(1000);
+          }
+        }
+
+        if (!navigationSuccessful) {
+          console.warn(
+            '[CollectorService] Could not navigate to dedicated activity tab; continuing with current page.',
+          );
+        }
          
          // Wait for network to settle to avoid Execution context destroyed errors during SPA navigation
          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
