@@ -104,31 +104,64 @@ export class AppService {
     await this.userRepo.save(newUser);
 
     // Setup Nodemailer with real SMTP
-    try {
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // true for 465, false for other ports
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+    const emailUser = process.env.EMAIL_USER?.trim();
+    // Google app passwords often contain spaces when copied, strip all spaces
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
 
-      const info = await transporter.sendMail({
-        from: `"MonitorHQ Admin" <${process.env.EMAIL_USER}>`,
-        to: data.email,
-        subject: 'Your Manager Account Details',
-        text: `Hello ${data.name},\n\nYour manager account for MonitorHQ has been created.\n\nUsername: ${data.email}\nPassword: ${generatedPassword}\n\nPlease login and connect your LinkedIn account.`,
-        html: `<p>Hello ${data.name},</p><p>Your manager account for MonitorHQ has been created.</p><p><b>Username:</b> ${data.email}<br/><b>Password:</b> ${generatedPassword}</p><p>Please login and connect your LinkedIn account.</p>`,
-      });
+    let emailSent = false;
+    let emailError: string | null = null;
 
-      console.log('Real email successfully sent to: %s', data.email);
-    } catch (err) {
-      console.error('Failed to send real email:', err);
+    if (!emailUser || !emailPass) {
+      emailError = 'SMTP configuration missing: EMAIL_USER or EMAIL_PASS environment variable is not set in Render Dashboard.';
+      console.warn(`[AppService.createManager] ${emailError}`);
+    } else {
+      try {
+        console.log(`[AppService.createManager] Sending account email from ${emailUser} to ${data.email}...`);
+
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: emailUser,
+            pass: emailPass,
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+        });
+
+        await transporter.sendMail({
+          from: `"MonitorHQ Admin" <${emailUser}>`,
+          to: data.email,
+          subject: 'Your Manager Account Details - MonitorHQ',
+          text: `Hello ${data.name},\n\nYour manager account for MonitorHQ has been created.\n\nUsername: ${data.email}\nPassword: ${generatedPassword}\n\nPlease login and connect your LinkedIn account.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <h2 style="color: #4f46e5; margin-top: 0;">Welcome to MonitorHQ</h2>
+              <p>Hello <b>${data.name}</b>,</p>
+              <p>Your manager account for MonitorHQ has been created.</p>
+              <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; margin: 20px 0; border: 1px solid #cbd5e1;">
+                <p style="margin: 4px 0;"><b>Username:</b> <code>${data.email}</code></p>
+                <p style="margin: 4px 0;"><b>Temporary Password:</b> <code>${generatedPassword}</code></p>
+              </div>
+              <p>Please log in and connect your social media accounts.</p>
+              <p style="font-size: 12px; color: #64748b; margin-top: 30px;">This is an automated message. Please keep your login credentials secure.</p>
+            </div>
+          `,
+        });
+
+        emailSent = true;
+        console.log('[AppService.createManager] Real email successfully sent to: %s', data.email);
+      } catch (err: any) {
+        console.error('[AppService.createManager] Failed to send real email:', err);
+        emailError = err.message || 'SMTP delivery failed';
+      }
     }
 
-    return newUser;
+    return {
+      ...newUser,
+      generatedPassword,
+      emailSent,
+      emailError,
+    };
   }
 
   async deleteManager(id: number) {

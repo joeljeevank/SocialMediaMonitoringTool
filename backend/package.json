@@ -6,8 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "(npx playwright install --with-deps chromium || npx playwright install chromium) && nest build",
-    "render-build": "npx playwright install --with-deps chromium && nest build",
+    "build": "node install-browsers.js && nest build",
+    "render-build": "node install-browsers.js && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

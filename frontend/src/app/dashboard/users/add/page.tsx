@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, AlertCircle, ArrowLeft, UserPlus } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowLeft, UserPlus, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { API_BASE_URL } from '@/lib/api-config';
@@ -22,6 +22,13 @@ export default function AddUserPage() {
   const [managerAddLoading, setManagerAddLoading] = useState(false);
   const [managerSuccess, setManagerSuccess] = useState('');
   const [managerError, setManagerError] = useState('');
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password?: string;
+    emailSent: boolean;
+    emailError?: string | null;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const userRole = localStorage.getItem('user_role');
@@ -36,6 +43,8 @@ export default function AddUserPage() {
     setManagerAddLoading(true);
     setManagerSuccess('');
     setManagerError('');
+    setCreatedCredentials(null);
+
     try {
       const res = await fetch(`${API_BASE_URL}/managers`, {
         method: 'POST',
@@ -49,8 +58,22 @@ export default function AddUserPage() {
           role: managerRole,
         }),
       });
+
       if (res.ok) {
-        setManagerSuccess(`User ${managerName} registered successfully! Credentials have been sent.`);
+        const data = await res.json();
+        setCreatedCredentials({
+          email: data.email || managerEmail.trim(),
+          password: data.generatedPassword || data.password,
+          emailSent: !!data.emailSent,
+          emailError: data.emailError,
+        });
+
+        if (data.emailSent) {
+          setManagerSuccess(`User ${managerName} registered successfully! Login credentials have been emailed to ${data.email}.`);
+        } else {
+          setManagerSuccess(`User ${managerName} registered successfully! (Note: Email could not be dispatched).`);
+        }
+
         setManagerName('');
         setManagerCompany('');
         setManagerCompanyRole('');
@@ -95,6 +118,70 @@ export default function AddUserPage() {
           <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{managerSuccess}</span>
+          </div>
+        )}
+
+        {createdCredentials && (
+          <div className="mb-6 p-4 rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
+                Generated Login Credentials
+              </span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                  createdCredentials.emailSent
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                }`}
+              >
+                {createdCredentials.emailSent ? 'Email Dispatched ✓' : 'Email Not Delivered ⚠️'}
+              </span>
+            </div>
+
+            {!createdCredentials.emailSent && createdCredentials.emailError && (
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 mb-3 bg-amber-50 dark:bg-amber-950/60 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/60">
+                <b>Delivery Notice:</b> {createdCredentials.emailError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white dark:bg-slate-900 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900">
+              <div>
+                <span className="text-slate-400 text-[10px] block">Username / Email</span>
+                <span className="font-mono text-slate-800 dark:text-slate-200 font-medium select-all">
+                  {createdCredentials.email}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px] block">Temporary Password</span>
+                <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold select-all">
+                  {createdCredentials.password || 'Saved securely'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {createdCredentials.emailSent
+                  ? 'Credentials sent to inbox. You can also copy them as backup.'
+                  : 'Please copy these credentials and share them with the user directly.'}
+              </p>
+              {createdCredentials.password && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `Username: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`
+                    );
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 3000);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer shrink-0"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied!' : 'Copy Credentials'}</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 

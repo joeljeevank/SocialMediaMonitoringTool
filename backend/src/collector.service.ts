@@ -15,6 +15,10 @@ import * as path from 'path';
 
 dotenv.config();
 
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = '0';
+}
+
 @Injectable()
 export class CollectorService {
   private activeCollections = new Set<number>();
@@ -175,6 +179,28 @@ export class CollectorService {
       } catch (err: any) {
         console.warn(`[CollectorService] Launch attempt ${attempt} failed: ${err.message}`);
         if (
+          err.message?.includes("Executable doesn't exist") ||
+          err.message?.includes('playwright install')
+        ) {
+          console.warn('[CollectorService] Browser binary is missing. Running emergency installation into node_modules...');
+          try {
+            const { execSync } = require('child_process');
+            execSync('npx playwright install chromium', {
+              stdio: 'inherit',
+              env: {
+                ...process.env,
+                PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
+              },
+            });
+            console.log('[CollectorService] Emergency browser installation succeeded. Retrying launch...');
+            continue;
+          } catch (installErr: any) {
+            console.error('[CollectorService] Emergency browser installation failed:', installErr.message);
+            throw new BadRequestException(
+              'Chromium browser is missing on the server. Please add environment variable PLAYWRIGHT_BROWSERS_PATH=0 in your Render Dashboard, then trigger a manual deploy.',
+            );
+          }
+        } else if (
           err.message?.includes('Opening in existing browser session') ||
           err.message?.includes('already in use')
         ) {
