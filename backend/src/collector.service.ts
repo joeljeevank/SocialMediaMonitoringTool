@@ -153,6 +153,115 @@ export class CollectorService {
     }
   }
 
+  private findChromiumExecutable(): string | undefined {
+    // 1. If PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is explicitly set in env, prioritize it
+    if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH && fs.existsSync(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)) {
+      return process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+    }
+
+    // 2. Candidate root directories where Playwright might have installed Chromium
+    const candidateRoots = [
+      path.resolve(process.cwd(), 'node_modules', 'playwright-core', '.local-browsers'),
+      path.resolve(process.cwd(), 'backend', 'node_modules', 'playwright-core', '.local-browsers'),
+      path.resolve(__dirname, '..', 'node_modules', 'playwright-core', '.local-browsers'),
+      path.resolve(__dirname, '..', '..', 'node_modules', 'playwright-core', '.local-browsers'),
+      '/opt/render/.cache/ms-playwright',
+      path.join(process.env.HOME || '', '.cache', 'ms-playwright'),
+      path.join(process.env.LOCALAPPDATA || '', 'ms-playwright'),
+    ];
+
+    for (const root of candidateRoots) {
+      if (!fs.existsSync(root)) continue;
+      try {
+        const items = fs.readdirSync(root);
+        for (const item of items) {
+          if (!item.startsWith('chromium')) continue;
+          const itemPath = path.join(root, item);
+          const subItems = fs.readdirSync(itemPath);
+          for (const sub of subItems) {
+            const subPath = path.join(itemPath, sub);
+            if (fs.statSync(subPath).isDirectory()) {
+              const files = fs.readdirSync(subPath);
+              for (const file of files) {
+                if (
+                  file === 'chrome' ||
+                  file === 'chrome.exe' ||
+                  file === 'chrome-headless-shell' ||
+                  file === 'chrome-headless-shell.exe'
+                ) {
+                  const fullBinary = path.join(subPath, file);
+                  // Ensure executable permissions on Linux/macOS
+                  if (process.platform !== 'win32') {
+                    try { fs.chmodSync(fullBinary, 0o755); } catch (e) {}
+                  }
+                  console.log(`[CollectorService] Discovered Chromium executable: ${fullBinary}`);
+                  return fullBinary;
+                }
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[CollectorService] Error searching root ${root}:`, err.message);
+      }
+    }
+
+    // 3. Fallback: check standard Linux system binaries
+    const systemBinaries = [
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+    ];
+    for (const sysBin of systemBinaries) {
+      if (fs.existsSync(sysBin)) {
+        console.log(`[CollectorService] Found system browser at: ${sysBin}`);
+        return sysBin;
+      }
+    }
+
+    // 4. Fallback: try chromium.executablePath() if playwright knows it
+    try {
+      const defaultPath = chromium.executablePath();
+      if (defaultPath && fs.existsSync(defaultPath)) {
+        if (process.platform !== 'win32') {
+          try { fs.chmodSync(defaultPath, 0o755); } catch (e) {}
+        }
+        return defaultPath;
+      }
+    } catch (e) {}
+
+    return undefined;
+  }
+
+  private ensureChromiumExecutable(): string | undefined {
+    let binary = this.findChromiumExecutable();
+    if (binary) return binary;
+
+    console.warn('[CollectorService] No Chromium executable detected on server. Attempting emergency installation...');
+    try {
+      const { execSync } = require('child_process');
+      // Install with PLAYWRIGHT_BROWSERS_PATH=0 so it installs inside node_modules
+      execSync('npx playwright install chromium', {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          PLAYWRIGHT_BROWSERS_PATH: '0',
+        },
+      });
+
+      binary = this.findChromiumExecutable();
+      if (binary) {
+        console.log(`[CollectorService] Emergency installation succeeded, binary at: ${binary}`);
+        return binary;
+      }
+    } catch (installErr: any) {
+      console.error('[CollectorService] Emergency browser installation failed:', installErr.message);
+    }
+
+    return undefined;
+  }
+
   private async launchBrowserWithRetry(userDataDir: string): Promise<BrowserContext> {
     this.cleanStaleLocks(userDataDir);
     this.cleanStaleLocks(path.join(userDataDir, 'Default'));
@@ -164,9 +273,12 @@ export class CollectorService {
         ? process.env.HEADLESS === 'true'
         : isProduction;
 
+    let executablePath = this.ensureChromiumExecutable();
+    console.log(`[CollectorService] Launching persistent context (headless: ${isHeadless}, executable: ${executablePath || 'Playwright default'})...`);
+
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const context = await chromium.launchPersistentContext(userDataDir, {
+        const launchOptions: any = {
           headless: isHeadless,
           args: [
             '--no-sandbox',
@@ -174,7 +286,13 @@ export class CollectorService {
             '--disable-dev-shm-usage',
             '--disable-gpu',
           ],
-        });
+        };
+
+        if (executablePath) {
+          launchOptions.executablePath = executablePath;
+        }
+
+        const context = await chromium.launchPersistentContext(userDataDir, launchOptions);
         return context;
       } catch (err: any) {
         console.warn(`[CollectorService] Launch attempt ${attempt} failed: ${err.message}`);
@@ -182,24 +300,15 @@ export class CollectorService {
           err.message?.includes("Executable doesn't exist") ||
           err.message?.includes('playwright install')
         ) {
-          console.warn('[CollectorService] Browser binary is missing. Running emergency installation into node_modules...');
-          try {
-            const { execSync } = require('child_process');
-            execSync('npx playwright install chromium', {
-              stdio: 'inherit',
-              env: {
-                ...process.env,
-                PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
-              },
-            });
-            console.log('[CollectorService] Emergency browser installation succeeded. Retrying launch...');
-            continue;
-          } catch (installErr: any) {
-            console.error('[CollectorService] Emergency browser installation failed:', installErr.message);
+          console.warn('[CollectorService] Browser binary missing or incompatible, attempting reinstall...');
+          executablePath = this.ensureChromiumExecutable();
+          if (attempt === 3) {
             throw new BadRequestException(
-              'Chromium browser is missing on the server. Please add environment variable PLAYWRIGHT_BROWSERS_PATH=0 in your Render Dashboard, then trigger a manual deploy.',
+              `Chromium browser binary could not be started on Render (${err.message}). In your Render Dashboard, please set environment variable PLAYWRIGHT_BROWSERS_PATH=0 and trigger a manual deploy.`,
             );
           }
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
         } else if (
           err.message?.includes('Opening in existing browser session') ||
           err.message?.includes('already in use')
