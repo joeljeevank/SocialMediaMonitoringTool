@@ -392,7 +392,11 @@ export class CollectorService {
     try {
       context = await this.launchBrowserWithRetry(userDataDir);
 
-      if (process.env.LINKEDIN_LI_AT_COOKIE) {
+      // Only inject cookie if in production cloud (Render) or explicitly requested
+      // On local machine, the persistent browser profile handles sessions natively
+      const shouldInjectCookie = isProduction || process.env.FORCE_COOKIE_INJECTION === 'true';
+
+      if (shouldInjectCookie && process.env.LINKEDIN_LI_AT_COOKIE) {
         const rawCookie = process.env.LINKEDIN_LI_AT_COOKIE.trim().replace(/^["']|["']$/g, '');
         try {
           await context.addCookies([
@@ -416,7 +420,7 @@ export class CollectorService {
             },
           ]);
           console.log(
-            '[CollectorService] Injected LINKEDIN_LI_AT_COOKIE into browser context',
+            '[CollectorService] Injected LINKEDIN_LI_AT_COOKIE into cloud browser context',
           );
         } catch (cookieErr: any) {
           console.warn(
@@ -441,13 +445,20 @@ export class CollectorService {
           navErr.message?.includes('ERR_TOO_MANY_REDIRECTS') ||
           navErr.message?.includes('too many redirects')
         ) {
-          console.error('[CollectorService] ERR_TOO_MANY_REDIRECTS: LinkedIn rejected the session cookie as expired/invalid.');
-          if (context) await context.close();
-          throw new BadRequestException(
-            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please copy a fresh "li_at" cookie from your browser and update it in your backend/.env (for local) or Render Dashboard (for cloud).',
-          );
+          if (isProduction) {
+            console.error('[CollectorService] ERR_TOO_MANY_REDIRECTS: LinkedIn rejected the session cookie on cloud.');
+            if (context) await context.close();
+            throw new BadRequestException(
+              'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please copy a fresh "li_at" cookie from your browser and update it in your Render Dashboard Environment Variables.',
+            );
+          } else {
+            console.warn('[CollectorService] ERR_TOO_MANY_REDIRECTS detected locally. Clearing cookies and navigating to login...');
+            await context.clearCookies().catch(() => {});
+            await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded' }).catch(() => {});
+          }
+        } else {
+          throw navErr;
         }
-        throw navErr;
       }
       await page.waitForTimeout(3000); // Allow redirects
 
