@@ -280,12 +280,18 @@ export class CollectorService {
       try {
         const launchOptions: any = {
           headless: isHeadless,
+          viewport: { width: 1280, height: 800 },
+          locale: 'en-US',
+          timezoneId: 'America/New_York',
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
+            '--disable-blink-features=AutomationControlled',
+            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
           ],
+          ignoreDefaultArgs: ['--enable-automation'],
         };
 
         if (executablePath) {
@@ -293,6 +299,15 @@ export class CollectorService {
         }
 
         const context = await chromium.launchPersistentContext(userDataDir, launchOptions);
+
+        try {
+          await context.addInitScript(() => {
+            Object.defineProperty(navigator, 'webdriver', {
+              get: () => undefined,
+            });
+          });
+        } catch (e) {}
+
         return context;
       } catch (err: any) {
         console.warn(`[CollectorService] Launch attempt ${attempt} failed: ${err.message}`);
@@ -378,11 +393,21 @@ export class CollectorService {
       context = await this.launchBrowserWithRetry(userDataDir);
 
       if (process.env.LINKEDIN_LI_AT_COOKIE) {
+        const rawCookie = process.env.LINKEDIN_LI_AT_COOKIE.trim().replace(/^["']|["']$/g, '');
         try {
           await context.addCookies([
             {
               name: 'li_at',
-              value: process.env.LINKEDIN_LI_AT_COOKIE.trim(),
+              value: rawCookie,
+              domain: '.www.linkedin.com',
+              path: '/',
+              secure: true,
+              httpOnly: true,
+              sameSite: 'None',
+            },
+            {
+              name: 'li_at',
+              value: rawCookie,
               domain: '.linkedin.com',
               path: '/',
               secure: true,
@@ -406,10 +431,24 @@ export class CollectorService {
       // Step 1: Session Check
       console.log('=== LINKEDIN COLLECTION START ===');
       currentStep = 'Session Check';
-      await page.goto('https://www.linkedin.com/', {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000,
-      });
+      try {
+        await page.goto('https://www.linkedin.com/feed/', {
+          waitUntil: 'domcontentloaded',
+          timeout: 45000,
+        });
+      } catch (navErr: any) {
+        if (
+          navErr.message?.includes('ERR_TOO_MANY_REDIRECTS') ||
+          navErr.message?.includes('too many redirects')
+        ) {
+          console.error('[CollectorService] ERR_TOO_MANY_REDIRECTS: LinkedIn rejected the session cookie as expired/invalid.');
+          if (context) await context.close();
+          throw new BadRequestException(
+            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please copy a fresh "li_at" cookie from your browser and update it in your Render Dashboard Environment Variables.',
+          );
+        }
+        throw navErr;
+      }
       await page.waitForTimeout(3000); // Allow redirects
 
       const sessionUrl = page.url();
@@ -488,10 +527,23 @@ export class CollectorService {
 
       // Step 2: Navigate to target company page
       currentStep = 'Navigate to Target Page';
-      await page.goto(targetUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000,
-      });
+      try {
+        await page.goto(targetUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 60000,
+        });
+      } catch (targetNavErr: any) {
+        if (
+          targetNavErr.message?.includes('ERR_TOO_MANY_REDIRECTS') ||
+          targetNavErr.message?.includes('too many redirects')
+        ) {
+          if (context) await context.close();
+          throw new BadRequestException(
+            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please extract a fresh "li_at" cookie from your browser and update your Render Environment Variables.',
+          );
+        }
+        throw targetNavErr;
+      }
       await page.waitForTimeout(3000); // Allow elements to load
 
       const finalUrl = page.url();
