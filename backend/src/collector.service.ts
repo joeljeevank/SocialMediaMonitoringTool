@@ -444,7 +444,7 @@ export class CollectorService {
           console.error('[CollectorService] ERR_TOO_MANY_REDIRECTS: LinkedIn rejected the session cookie as expired/invalid.');
           if (context) await context.close();
           throw new BadRequestException(
-            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please copy a fresh "li_at" cookie from your browser and update it in your Render Dashboard Environment Variables.',
+            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please copy a fresh "li_at" cookie from your browser and update it in your backend/.env (for local) or Render Dashboard (for cloud).',
           );
         }
         throw navErr;
@@ -539,7 +539,7 @@ export class CollectorService {
         ) {
           if (context) await context.close();
           throw new BadRequestException(
-            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please extract a fresh "li_at" cookie from your browser and update your Render Environment Variables.',
+            'LinkedIn session cookie (LINKEDIN_LI_AT_COOKIE) has expired or was revoked by LinkedIn. Please extract a fresh "li_at" cookie from your browser and update your backend/.env (for local) or Render Dashboard (for cloud).',
           );
         }
         throw targetNavErr;
