@@ -11,15 +11,12 @@ import {
   User, 
   Lock, 
   ShieldCheck, 
-  Key, 
   CheckCircle2, 
   AlertCircle, 
   Eye, 
   EyeOff, 
   Save, 
   RefreshCw,
-  Copy,
-  Check,
   Sliders
 } from 'lucide-react';
 import axios from 'axios';
@@ -49,10 +46,6 @@ export default function AccountSettingsPage() {
   const [syncInterval, setSyncInterval] = useState('30m');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [liveTelemetryAlerts, setLiveTelemetryAlerts] = useState(true);
-
-  // API Config State
-  const [copiedUri, setCopiedUri] = useState(false);
-  const redirectUri = `${API_BASE_URL}/api/youtube/auth/callback`;
 
   useEffect(() => {
     setName(localStorage.getItem('user_name') || 'Administrator');
@@ -112,12 +105,6 @@ export default function AccountSettingsPage() {
     } finally {
       setPasswordLoading(false);
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedUri(true);
-    setTimeout(() => setCopiedUri(false), 2000);
   };
 
   return (
@@ -400,34 +387,6 @@ export default function AccountSettingsPage() {
                   <option value="1h">Every 1 hour</option>
                   <option value="6h">Every 6 hours</option>
                 </select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* OAuth Integration Reference */}
-          <Card className="glass border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs">
-            <CardHeader className="p-5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-500" />
-                OAuth 2.0 Integration Callback
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 space-y-3">
-              <p className="text-xs text-slate-500 dark:text-gray-400 leading-relaxed">
-                Authorized Redirect URI for Google Cloud Platform console (OAuth client credential configuration):
-              </p>
-              <div className="flex items-center gap-2 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 p-2 rounded-xl">
-                <code className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 truncate flex-1">
-                  {redirectUri}
-                </code>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => copyToClipboard(redirectUri)}
-                  className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0"
-                >
-                  {copiedUri ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </Button>
               </div>
             </CardContent>
           </Card>

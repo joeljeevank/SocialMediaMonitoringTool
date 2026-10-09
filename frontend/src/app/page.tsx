@@ -32,6 +32,10 @@ export default function LoginPage() {
 
   // Aggressively prefetch all dashboard routes on mount for sub-second login redirects
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    if (token) {
+      router.push('/dashboard/profile');
+    }
     router.prefetch('/dashboard/profile');
     router.prefetch('/dashboard');
     router.prefetch('/dashboard/youtube');

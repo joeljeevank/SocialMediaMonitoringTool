@@ -28,6 +28,7 @@ import {
   Layers,
   ChevronDown,
   ArrowUpDown,
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Share2,
@@ -541,14 +542,34 @@ function YouTubeDashboardContent() {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-red-600 to-pink-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-red-600/30">
-            <YoutubeIcon className="w-8 h-8" />
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+        <div className="flex items-start gap-3 sm:gap-3.5">
+          {Boolean(selectedChannelId) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedChannelId('');
+                setVideoPage(1);
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete('channelId');
+                const query = params.toString();
+                router.push(query ? `/dashboard/youtube?${query}` : '/dashboard/youtube');
+              }}
+              className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 hover:border-red-500/40 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all cursor-pointer shadow-xs shrink-0 group flex items-center justify-center mt-0.5"
+              aria-label="Back to Channels Overview"
+              title="Back to Channels Overview"
+            >
+              <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 to-pink-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-red-600/30 mt-0.5">
+            <YoutubeIcon className="w-6 h-6" />
           </div>
+
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                 YouTube Dashboard
               </h1>
               <span
@@ -561,14 +582,14 @@ function YouTubeDashboardContent() {
                 </span>
                 Real-Time Live Active
               </span>
-            </div>
-            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1 flex flex-wrap items-center gap-2">
-              <span>Live multi-channel performance, audience metrics, and video analytics</span>
               {lastLiveUpdated && (
-                <span className="text-[11px] text-emerald-500 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="inline-flex items-center gap-1 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm">
                   ⚡ Live updated {lastLiveUpdated}
                 </span>
               )}
+            </div>
+            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">
+              Live multi-channel performance, audience metrics, and video analytics
             </p>
           </div>
         </div>

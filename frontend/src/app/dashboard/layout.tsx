@@ -10,11 +10,10 @@ import {
   User, 
   FileText,
   BarChart3,
-  ChevronRight,
+  ArrowLeft,
   Menu,
   X,
   Shield,
-  Home,
   Settings
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -59,8 +58,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems: Array<{ href: string; label: string; icon: any; active: boolean; badge?: string }> = [
     {
+      href: '/dashboard/profile',
+      label: 'My Profile',
+      icon: User,
+      active: activePath === '/dashboard/profile',
+    },
+    {
       href: '/dashboard',
-      label: 'LinkedIn Overview',
+      label: 'LinkedIn Monitoring',
       icon: LayoutDashboard,
       active: activePath === '/dashboard',
     },
@@ -70,18 +75,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: YoutubeIcon,
       active: activePath.startsWith('/dashboard/youtube'),
     },
-    {
-      href: '/dashboard/profile',
-      label: 'My Profile',
-      icon: User,
-      active: activePath === '/dashboard/profile',
-    },
     ...(userRole === 'super_admin' ? [
       {
         href: '/dashboard/users',
         label: 'User Management',
         icon: Users,
-        active: activePath === '/dashboard/users',
+        active: activePath.startsWith('/dashboard/users'),
       },
     ] : []),
     {
@@ -163,11 +162,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Brand Header */}
         <div className="h-16 px-5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between">
           <Link 
-            href="/dashboard" 
+            href="/dashboard/profile"
             prefetch={true} 
-            onMouseEnter={() => prefetchRoute('/dashboard')}
-            onFocus={() => prefetchRoute('/dashboard')}
-            onClick={() => handleNavClick('/dashboard')}
+            onMouseEnter={() => prefetchRoute('/dashboard/profile')}
+            onFocus={() => prefetchRoute('/dashboard/profile')}
+            onClick={() => handleNavClick('/dashboard/profile')}
             className="flex items-center gap-3 group"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-base shadow-md shadow-cyan-500/25 group-hover:scale-105 transition-transform">
@@ -269,32 +268,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {/* Top Navbar Header */}
-        <header className="h-16 bg-white dark:bg-[#0f172a] border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 flex items-center justify-between shrink-0 z-10">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              aria-label="Open navigation menu"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <Link href="/dashboard" className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hidden sm:flex items-center gap-1">
-                <Home className="w-3.5 h-3.5" />
-                <span>Dashboard</span>
-              </Link>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 hidden sm:inline" />
-              <h1 className="font-semibold text-slate-900 dark:text-white text-sm">
-                {getPageTitle()}
-              </h1>
-            </div>
-          </div>
-
-
-        </header>
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative">
+        {/* Mobile Menu Button (Mobile Screens Only) */}
+        {!mobileMenuOpen && (
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shadow-md cursor-pointer"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Dynamic Page Scroll Area */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-[#090d16] custom-scrollbar">

@@ -193,134 +193,15 @@ export default function ProfileDashboard() {
             </div>
           </div>
 
-          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-xl border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold px-4 py-2 gap-2 shrink-0 cursor-pointer"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Account Settings</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 rounded-2xl p-6">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-indigo-600" />
-                  Security & Password
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Update your authentication password for {userDetails.email}
-                </p>
-              </div>
-
-              {passwordError && (
-                <div className="mb-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{passwordError}</span>
-                </div>
-              )}
-
-              {passwordSuccess && (
-                <div className="mb-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{passwordSuccess}</span>
-                </div>
-              )}
-
-              <form onSubmit={handlePasswordChange} className="space-y-3.5">
-                <div className="space-y-1">
-                  <Label htmlFor="curr-pass" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Current Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="curr-pass"
-                      type={showCurrent ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 rounded-lg"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrent(!showCurrent)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {showCurrent ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="new-pass" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    New Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="new-pass"
-                      type={showNew ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Minimum 6 characters"
-                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 rounded-lg"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNew(!showNew)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {showNew ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="confirm-pass" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Confirm New Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm-pass"
-                      type={showConfirm ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repeat new password"
-                      className="text-xs h-9 pr-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 rounded-lg"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {showConfirm ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsSettingsOpen(false)}
-                    className="text-xs h-9 px-4 rounded-lg"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={passwordLoading}
-                    className="text-xs h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
-                  >
-                    {passwordLoading ? 'Saving...' : 'Update Password'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Link href="/dashboard/settings">
+            <Button
+              variant="outline"
+              className="rounded-xl border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold px-4 py-2 gap-2 shrink-0 cursor-pointer"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Account Settings</span>
+            </Button>
+          </Link>
         </div>
       </div>
 
