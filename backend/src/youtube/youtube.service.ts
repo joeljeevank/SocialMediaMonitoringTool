@@ -252,6 +252,7 @@ export class YoutubeService implements OnModuleInit {
       this.logger.error(`Initial background sync failed for channel ${channelId}:`, err.message);
     });
 
+    this.invalidateChannelsCache();
     return channel;
   }
 
@@ -445,6 +446,7 @@ export class YoutubeService implements OnModuleInit {
 
     channel.lastSyncedAt = new Date().toISOString();
     await this.channelRepo.save(channel);
+    this.invalidateChannelsCache();
 
     const { accessToken, refreshToken, ...safeChannel } = channel;
     return {
@@ -575,6 +577,7 @@ export class YoutubeService implements OnModuleInit {
 
       channel.lastSyncedAt = new Date().toISOString();
       await this.channelRepo.save(channel);
+      this.invalidateChannelsCache();
 
       const { accessToken, refreshToken, ...safeChannel } = channel;
       return {
@@ -714,6 +717,7 @@ export class YoutubeService implements OnModuleInit {
     await this.ensureRealtimeDailyAnalytics(saved, subDiff);
 
     const { accessToken, refreshToken, ...safeChannel } = saved;
+    this.invalidateChannelsCache();
     return {
       success: true,
       message: `Channel "${channel.title}" successfully synchronized.`,
@@ -773,6 +777,7 @@ export class YoutubeService implements OnModuleInit {
     await this.ensureRealtimeDailyAnalytics(saved, subDiff);
 
     const { accessToken, refreshToken, ...safeChannel } = saved;
+    this.invalidateChannelsCache();
     return {
       success: true,
       message: `Channel "${channel.title}" successfully synchronized.`,
@@ -803,12 +808,21 @@ export class YoutubeService implements OnModuleInit {
     );
   }
 
+  private channelsCache: { data: any[]; timestamp: number } | null = null;
+
+  public invalidateChannelsCache(): void {
+    this.channelsCache = null;
+  }
+
   async getChannels(): Promise<any[]> {
+    if (this.channelsCache && Date.now() - this.channelsCache.timestamp < 15000) {
+      return this.channelsCache.data;
+    }
     const channels = await this.channelRepo.find({
       order: { createdAt: 'DESC' },
     });
     // Sanitize secret tokens before sending to frontend, and include authType & isOAuth
-    return channels.map(({ accessToken, refreshToken, ...rest }) => {
+    const result = channels.map(({ accessToken, refreshToken, ...rest }) => {
       const isOAuth = this.isChannelOAuth({ accessToken, refreshToken, ...rest });
       return {
         ...rest,
@@ -816,6 +830,8 @@ export class YoutubeService implements OnModuleInit {
         authType: isOAuth ? 'oauth' : 'identifier',
       };
     });
+    this.channelsCache = { data: result, timestamp: Date.now() };
+    return result;
   }
 
   async getChannel(id: number): Promise<any> {
@@ -841,6 +857,7 @@ export class YoutubeService implements OnModuleInit {
       throw new NotFoundException('Channel not found');
     }
     await this.channelRepo.delete(id);
+    this.invalidateChannelsCache();
     return { success: true, message: `Channel "${channel.title}" disconnected.` };
   }
 
@@ -1062,9 +1079,11 @@ export class YoutubeService implements OnModuleInit {
     const hasAnalyticsAccess = anyOAuth;
     const authType = allOAuth ? 'oauth' : anyOAuth ? 'mixed' : 'identifier';
 
-    // Refresh live stats & ensure real-time analytics
+    // Refresh live stats in background asynchronously without blocking read response
     for (const c of targetChannels) {
-      await this.refreshLiveChannelStats(c);
+      this.refreshLiveChannelStats(c).catch((e: any) => {
+        this.logger.warn(`Background live stats refresh failed: ${e.message}`);
+      });
       await this.ensureRealtimeDailyAnalytics(c);
     }
 

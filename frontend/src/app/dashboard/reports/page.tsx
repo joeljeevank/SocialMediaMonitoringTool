@@ -21,6 +21,7 @@ import {
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
 import axios from 'axios';
 import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, markHydrated } from '@/lib/data-cache';
 
 type LinkedInAccount = {
   id: number;
@@ -93,14 +94,16 @@ function ReportsContent() {
   const initialPlatform = searchParams.get('platform') === 'youtube' ? 'youtube' : 'linkedin';
   const [activePlatform, setActivePlatform] = useState<'linkedin' | 'youtube'>(initialPlatform);
 
-  // LinkedIn State
-  const [accounts, setAccounts] = useState<LinkedInAccount[]>([]);
+  // LinkedIn State with Instant Cache
+  const cachedAccounts = getSSRSafeCache<LinkedInAccount[]>(CacheKeys.ACCOUNTS);
+  const [accounts, setAccounts] = useState<LinkedInAccount[]>(() => cachedAccounts || []);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [loadingLinkedIn, setLoadingLinkedIn] = useState(false);
   const [linkedInAnalytics, setLinkedInAnalytics] = useState<any[]>([]);
 
-  // YouTube State
-  const [channels, setChannels] = useState<YouTubeChannel[]>([]);
+  // YouTube State with Instant Cache
+  const cachedChannels = getSSRSafeCache<YouTubeChannel[]>(CacheKeys.YOUTUBE_CHANNELS);
+  const [channels, setChannels] = useState<YouTubeChannel[]>(() => cachedChannels || []);
   const initialChannelId = searchParams.get('channelId') || 'all';
   const [selectedYouTubeChannelId, setSelectedYouTubeChannelId] = useState<string>(initialChannelId);
   const initialRange = searchParams.get('range') || '28d';
@@ -113,10 +116,18 @@ function ReportsContent() {
 
   // Fetch LinkedIn Accounts
   useEffect(() => {
+    markHydrated();
+    const acc = getFromCache<LinkedInAccount[]>(CacheKeys.ACCOUNTS);
+    if (acc) setAccounts(acc);
+    const ch = getFromCache<YouTubeChannel[]>(CacheKeys.YOUTUBE_CHANNELS);
+    if (ch) setChannels(ch);
+
     const fetchAccounts = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/accounts`);
-        setAccounts(res.data || []);
+        const data = res.data || [];
+        setAccounts(data);
+        setInCache(CacheKeys.ACCOUNTS, data);
       } catch (error) {
         console.error('Failed to fetch LinkedIn accounts', error);
       }
@@ -128,7 +139,9 @@ function ReportsContent() {
   const fetchChannels = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/youtube/channels`);
-      setChannels(res.data || []);
+      const data = res.data || [];
+      setChannels(data);
+      setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
     } catch (error) {
       console.error('Failed to fetch YouTube channels', error);
     }

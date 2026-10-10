@@ -31,6 +31,9 @@ export class Post {
   @Column({ default: 0 })
   comments: number;
 
+  @Column({ default: 0 })
+  shares: number;
+
   @Column({ default: 'API' })
   dataSource: string;
 

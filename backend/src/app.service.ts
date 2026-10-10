@@ -174,6 +174,12 @@ export class AppService {
     return { success: true };
   }
 
+  private accountsCache: { data: any; timestamp: number } | null = null;
+
+  public invalidateAccountsCache() {
+    this.accountsCache = null;
+  }
+
   async disconnectAccount(id: number) {
     const account = await this.accountRepo.findOne({ where: { id } });
     if (!account) {
@@ -184,6 +190,7 @@ export class AppService {
     await this.analyticsRepo.delete({ account: { id } });
     // Now delete the account
     await this.accountRepo.remove(account);
+    this.invalidateAccountsCache();
     return { success: true };
   }
 
@@ -197,14 +204,32 @@ export class AppService {
       account.profileUrl = data.profileUrl;
     }
     await this.accountRepo.save(account);
+    this.invalidateAccountsCache();
     return account;
   }
 
   async connectAccount(data: { platform: string; username: string }) {
+    const platform = data.platform || 'LinkedIn';
+    const cleanUsername = data.username.trim().replace(/^@/, '').replace(/\/+$/, '');
+
+    const existing = await this.accountRepo.findOne({
+      where: {
+        platform,
+        username: cleanUsername,
+      },
+      relations: {
+        analytics: true,
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
     const newAccount = this.accountRepo.create({
-      platform: data.platform || 'LinkedIn',
-      username: data.username,
-      profileUrl: `https://linkedin.com/in/${data.username}`,
+      platform,
+      username: cleanUsername,
+      profileUrl: `https://linkedin.com/in/${cleanUsername}`,
       status: 'Connected',
     });
 
@@ -224,16 +249,22 @@ export class AppService {
       account: saved,
     });
     await this.analyticsRepo.save([initialAnalytics]);
+    this.invalidateAccountsCache();
 
     return saved;
   }
 
   async getAccounts() {
-    return this.accountRepo.find({
+    if (this.accountsCache && Date.now() - this.accountsCache.timestamp < 15000) {
+      return this.accountsCache.data;
+    }
+    const accounts = await this.accountRepo.find({
       relations: {
         analytics: true,
       },
     });
+    this.accountsCache = { data: accounts, timestamp: Date.now() };
+    return accounts;
   }
 
   async getAnalytics(accountId: number) {

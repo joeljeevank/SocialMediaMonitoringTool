@@ -6,19 +6,24 @@ import { Trash2, Plus, Search, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, isHydrated, markHydrated } from '@/lib/data-cache';
 
 export default function UserManagementPage() {
   const router = useRouter();
-  const [managers, setManagers] = useState<any[]>([]);
+  const cachedUsers = getSSRSafeCache<any[]>(CacheKeys.SYSTEM_USERS);
+  const [managers, setManagers] = useState<any[]>(() => cachedUsers || []);
   const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState(() => (isHydrated() && typeof window !== 'undefined' ? localStorage.getItem('user_role') || '' : ''));
 
   useEffect(() => {
+    markHydrated();
     const userRole = localStorage.getItem('user_role');
     setRole(userRole || '');
     if (userRole !== 'super_admin') {
       router.push('/dashboard');
     } else {
+      const u = getFromCache<any[]>(CacheKeys.SYSTEM_USERS);
+      if (u) setManagers(u);
       fetchManagers();
     }
   }, [router]);
@@ -29,6 +34,7 @@ export default function UserManagementPage() {
       if (res.ok) {
         const data = await res.json();
         setManagers(data);
+        setInCache(CacheKeys.SYSTEM_USERS, data);
       }
     } catch (error) {
       console.error('Failed to fetch managers', error);

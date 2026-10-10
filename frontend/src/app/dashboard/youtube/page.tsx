@@ -54,6 +54,7 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, markHydrated } from '@/lib/data-cache';
 
 type Channel = {
   id: number;
@@ -143,14 +144,20 @@ function YouTubeDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // State Management
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  // State Management with Instant Cache Hydration
+  const cachedChannels = getSSRSafeCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
+  const [channels, setChannels] = useState<Channel[]>(() => cachedChannels || []);
+  const initialChannelId = cachedChannels && cachedChannels.length > 0 ? (cachedChannels[0].id ? String(cachedChannels[0].id) : 'all') : '';
+  const [selectedChannelId, setSelectedChannelId] = useState<string>(initialChannelId);
   const [dateRange, setDateRange] = useState<string>('28d');
-  const [loading, setLoading] = useState<boolean>(true);
+
+  const cachedOverview = initialChannelId ? getSSRSafeCache<any>(CacheKeys.YOUTUBE_OVERVIEW(initialChannelId, '28d')) : null;
+  const cachedTimeseries = initialChannelId ? getSSRSafeCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(initialChannelId, '28d')) : null;
+
+  const [loading, setLoading] = useState<boolean>(!cachedOverview);
   const [syncing, setSyncing] = useState<boolean>(false);
-  const [overview, setOverview] = useState<any>(null);
-  const [timeseries, setTimeseries] = useState<any[]>([]);
+  const [overview, setOverview] = useState<any>(() => cachedOverview || null);
+  const [timeseries, setTimeseries] = useState<any[]>(() => cachedTimeseries || []);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [videoTotal, setVideoTotal] = useState<number>(0);
   const [videoPage, setVideoPage] = useState<number>(1);
@@ -228,7 +235,15 @@ function YouTubeDashboardContent() {
   const fetchChannels = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/youtube/channels`);
-      setChannels(res.data || []);
+      const data = res.data || [];
+      setChannels(data);
+      setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
+      setSelectedChannelId((prev) => {
+        if (!prev && data.length > 0) {
+          return data[0].id ? String(data[0].id) : 'all';
+        }
+        return prev;
+      });
     } catch (e) {
       console.error('Failed to fetch channels', e);
     }
@@ -245,6 +260,7 @@ function YouTubeDashboardContent() {
         params: { channelId: selectedChannelId, range: dateRange },
       });
       setOverview(res.data);
+      setInCache(CacheKeys.YOUTUBE_OVERVIEW(selectedChannelId, dateRange), res.data);
     } catch (e) {
       console.error('Failed to fetch overview stats', e);
     }
@@ -261,6 +277,7 @@ function YouTubeDashboardContent() {
         params: { channelId: selectedChannelId, range: dateRange },
       });
       setTimeseries(res.data || []);
+      setInCache(CacheKeys.YOUTUBE_TIMESERIES(selectedChannelId, dateRange), res.data || []);
     } catch (e) {
       console.error('Failed to fetch analytics timeseries', e);
     }
@@ -300,25 +317,41 @@ function YouTubeDashboardContent() {
 
   // Initial Config & Channels Loading Effect (runs once or on OAuth status)
   useEffect(() => {
+    markHydrated();
+    const ch = getFromCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
+    if (ch && ch.length > 0) {
+      setChannels(ch);
+      setSelectedChannelId((prev) => prev || (ch[0].id ? String(ch[0].id) : 'all'));
+    }
     fetchConfig();
     checkOAuthStatus();
     fetchChannels();
   }, [fetchConfig, checkOAuthStatus, fetchChannels]);
 
-  // Channel & Date Range Overview / Analytics Effect
+  // Channel & Date Range Overview / Analytics Effect with instant cached hydration
   useEffect(() => {
     const loadDashboardMetrics = async () => {
-      setLoading(true);
-      if (selectedChannelId) {
-        await Promise.all([
-          fetchOverview(),
-          fetchTimeseries(),
-        ]);
+      if (!selectedChannelId) return;
+
+      const cachedOv = getFromCache<any>(CacheKeys.YOUTUBE_OVERVIEW(selectedChannelId, dateRange));
+      const cachedTs = getFromCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(selectedChannelId, dateRange));
+
+      if (cachedOv) setOverview(cachedOv);
+      if (cachedTs) setTimeseries(cachedTs);
+
+      // Only show full loading skeleton if we have neither overview nor timeseries cached
+      if (!cachedOv && !cachedTs) {
+        setLoading(true);
       }
+
+      await Promise.all([
+        fetchOverview(),
+        fetchTimeseries(),
+      ]);
       setLoading(false);
     };
     loadDashboardMetrics();
-  }, [fetchOverview, fetchTimeseries, selectedChannelId]);
+  }, [fetchOverview, fetchTimeseries, selectedChannelId, dateRange]);
 
   // Separate Fast Videos Loading Effect (runs instantly on page/search/sort change without freezing dashboard)
   useEffect(() => {
@@ -1479,7 +1512,7 @@ function YouTubeDashboardContent() {
 
       {/* Connect Channel / Setup Modal */}
       <Dialog open={showConnectModal} onOpenChange={setShowConnectModal}>
-        <DialogContent className="max-w-2xl sm:max-w-2xl lg:max-w-3xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <DialogContent className="max-w-2xl sm:max-w-2xl lg:max-w-3xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

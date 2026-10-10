@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
+import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, markHydrated } from '@/lib/data-cache';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -28,12 +30,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [optimisticPathname, setOptimisticPathname] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
-  const [, startTransition] = useTransition();
 
   useEffect(() => {
+    markHydrated();
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
     if (!token) {
       router.push('/');
+      return;
     } else {
       setUserRole(localStorage.getItem('user_role'));
       setUserName(localStorage.getItem('user_name') || 'Administrator');
@@ -47,6 +50,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.prefetch('/dashboard/users');
     router.prefetch('/dashboard/users/add');
     router.prefetch('/dashboard/settings');
+
+    // Pre-warm background cache so any clicked tab has its data ready instantly (0ms)
+    try {
+      if (!getFromCache(CacheKeys.ACCOUNTS)) {
+        fetch(`${API_BASE_URL}/accounts`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data) setInCache(CacheKeys.ACCOUNTS, data);
+          })
+          .catch(() => {});
+      }
+      if (!getFromCache(CacheKeys.YOUTUBE_CHANNELS)) {
+        fetch(`${API_BASE_URL}/api/youtube/channels`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data) setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
+          })
+          .catch(() => {});
+      }
+    } catch {}
   }, [router]);
 
   // Clear optimistic pathname when navigation completes
@@ -59,6 +82,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems: Array<{ href: string; label: string; icon: any; active: boolean; badge?: string }> = [
     {
+      href: '/dashboard/profile',
+      label: 'My Profile',
+      icon: User,
+      active: activePath === '/dashboard/profile',
+    },
+    {
       href: '/dashboard',
       label: 'LinkedIn Overview',
       icon: LayoutDashboard,
@@ -69,12 +98,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: 'YouTube Analytics',
       icon: YoutubeIcon,
       active: activePath.startsWith('/dashboard/youtube'),
-    },
-    {
-      href: '/dashboard/profile',
-      label: 'My Profile',
-      icon: User,
-      active: activePath === '/dashboard/profile',
     },
     ...(userRole === 'super_admin' ? [
       {
@@ -108,10 +131,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMobileMenuOpen(false);
     if (href !== pathname) {
       setOptimisticPathname(href);
-      setIsNavigating(true);
-      startTransition(() => {
-        router.push(href);
-      });
     }
   };
 

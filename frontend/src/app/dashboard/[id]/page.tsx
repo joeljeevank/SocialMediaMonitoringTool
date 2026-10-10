@@ -18,6 +18,7 @@ import {
   Calendar, 
   RefreshCw, 
   CheckCircle2, 
+  AlertCircle,
   ExternalLink,
   Search,
   ArrowUpDown,
@@ -27,6 +28,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, getSSRSafeCache, markHydrated } from '@/lib/data-cache';
 
 function cleanPostDate(raw?: string | null) {
   if (!raw) return '-';
@@ -153,11 +155,13 @@ function getExactPostDateTooltip(postUrl?: string | null, rawPostDate?: string |
 export default function AnalyticsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedAnalytics = id ? getSSRSafeCache<any[]>(`sp_cache_analytics_${id}`) : null;
+  const [data, setData] = useState<any[]>(() => cachedAnalytics || []);
+  const [loading, setLoading] = useState(!cachedAnalytics);
   const [collecting, setCollecting] = useState(false);
   const [scrapedData, setScrapedData] = useState<any>(null);
   const [collectionSuccessMsg, setCollectionSuccessMsg] = useState<string | null>(null);
+  const [collectionErrorMsg, setCollectionErrorMsg] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [sessionSynced, setSessionSynced] = useState(false);
 
@@ -232,14 +236,26 @@ export default function AnalyticsPage() {
   }, [id]);
 
   useEffect(() => {
+    markHydrated();
+    if (id) {
+      const c = getFromCache<any[]>(`sp_cache_analytics_${id}`);
+      if (c) {
+        setData(c);
+        setLoading(false);
+      }
+    }
     const fetchAnalytics = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/analytics/${id}`);
         setData(res.data);
+        if (id) {
+          setInCache(`sp_cache_analytics_${id}`, res.data);
+        }
       } catch (error) {
         console.error('Failed to fetch analytics', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     if (id) fetchAnalytics();
   }, [id]);
@@ -268,16 +284,38 @@ export default function AnalyticsPage() {
 
   const latest = data[data.length - 1];
 
-  // Derive the effective followers count:
-  // 1. From latest record if > 0
-  // 2. From scrapedData if > 0
-  // 3. Fallback to reverse search in data history for any non-zero follower count
+  // Derive effective metrics prioritizing real-time scrapedData, then latest DB record, then history:
   const effectiveFollowers = 
-    (latest?.followers && latest.followers > 0)
-      ? latest.followers
-      : (scrapedData?.followers && scrapedData.followers > 0)
-        ? scrapedData.followers
-        : ([...data].reverse().find(d => d.followers > 0)?.followers || 0);
+    (scrapedData?.followers !== undefined && scrapedData?.followers !== null)
+      ? scrapedData.followers
+      : (latest?.followers !== undefined && latest?.followers !== null)
+        ? latest.followers
+        : ([...data].reverse().find(d => d.followers !== undefined && d.followers !== null)?.followers ?? 0);
+
+  const effectiveViews = 
+    (scrapedData?.views !== undefined && scrapedData?.views !== null)
+      ? scrapedData.views
+      : (latest?.views ?? 0);
+
+  const effectiveLikes = 
+    (scrapedData?.likes !== undefined && scrapedData?.likes !== null)
+      ? scrapedData.likes
+      : (latest?.likes ?? 0);
+
+  const effectiveComments = 
+    (scrapedData?.comments !== undefined && scrapedData?.comments !== null)
+      ? scrapedData.comments
+      : (latest?.comments ?? 0);
+
+  const effectiveShares = 
+    (scrapedData?.shares !== undefined && scrapedData?.shares !== null)
+      ? scrapedData.shares
+      : (latest?.shares ?? 0);
+
+  const effectiveAllPosts = 
+    (scrapedData?.totalPosts !== undefined && scrapedData?.totalPosts !== null)
+      ? scrapedData.totalPosts
+      : (totalPosts || scrapedData?.posts?.length || latest?.recentPosts || 0);
 
   // Derive the effective last collection timestamp:
   // 1. From recently scraped data
@@ -348,6 +386,7 @@ export default function AnalyticsPage() {
   const handleCollectLinkedInData = async () => {
     setCollecting(true);
     setCollectionSuccessMsg(null);
+    setCollectionErrorMsg(null);
     try {
       const res = await axios.post(`${API_BASE_URL}/api/linkedin/collect?accountId=${id}`);
       const result = res.data;
@@ -365,15 +404,33 @@ export default function AnalyticsPage() {
         setCollectionSuccessMsg('Data successfully collected and synchronized from LinkedIn!');
         setTimeout(() => setCollectionSuccessMsg(null), 9000);
       } else {
-        alert('Error collecting data: ' + result.message);
+        const msg = result.message || 'Collection failed';
+        setCollectionErrorMsg(cleanCollectorError(msg));
       }
     } catch (e: any) {
       console.error(e);
-      const errorMsg = e.response?.data?.message || e.response?.data?.error || e.message;
-      alert('Error collecting data: ' + errorMsg);
+      const rawErrorMsg = e.response?.data?.message || e.response?.data?.error || e.message || 'An unexpected error occurred';
+      setCollectionErrorMsg(cleanCollectorError(rawErrorMsg));
     } finally {
       setCollecting(false);
     }
+  };
+
+  const cleanCollectorError = (msg: string) => {
+    if (!msg) return 'Failed to collect data from LinkedIn.';
+    if (msg.includes('ERR_NAME_NOT_RESOLVED') || msg.includes('name not resolved')) {
+      return 'Unable to resolve linkedin.com (DNS / Network resolution error). Please check your internet connection or DNS and try again.';
+    }
+    if (msg.includes('ERR_INTERNET_DISCONNECTED')) {
+      return 'Your device is currently offline. Please check your network connection.';
+    }
+    if (msg.includes('ERR_TOO_MANY_REDIRECTS')) {
+      return 'LinkedIn session expired or invalid. Please refresh your session or update your li_at cookie.';
+    }
+    if (msg.includes('Call log:')) {
+      return msg.split('Call log:')[0].trim();
+    }
+    return msg;
   };
 
   return (
@@ -407,6 +464,38 @@ export default function AnalyticsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Error Notification Alert with Direct Retry Action */}
+      {collectionErrorMsg && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg shadow-rose-500/5">
+          <div className="flex items-start sm:items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <p className="font-semibold text-rose-800 dark:text-rose-200">Collection Error</p>
+              <p className="text-xs opacity-90">{collectionErrorMsg}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <Button
+              onClick={handleCollectLinkedInData}
+              disabled={collecting}
+              size="sm"
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold px-3 py-1.5 h-8 flex items-center gap-1.5 shadow-sm"
+            >
+              <RefreshCw className={`w-3 h-3 ${collecting ? 'animate-spin' : ''}`} />
+              Retry Now
+            </Button>
+            <Button
+              onClick={() => setCollectionErrorMsg(null)}
+              variant="ghost"
+              size="sm"
+              className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 rounded-xl text-xs h-8 px-2.5"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Success Notification Alert */}
       {collectionSuccessMsg && (
@@ -562,6 +651,7 @@ export default function AnalyticsPage() {
                     <th className="py-3.5 px-4 text-center whitespace-nowrap">Impressions</th>
                     <th className="py-3.5 px-4 text-center whitespace-nowrap">Reactions</th>
                     <th className="py-3.5 px-4 text-center whitespace-nowrap">Comments</th>
+                    <th className="py-3.5 px-4 text-center whitespace-nowrap">Shares</th>
                     <th className="py-3.5 px-4 whitespace-nowrap">Post Date</th>
                     <th className="py-3.5 px-5 text-right whitespace-nowrap">Link</th>
                   </tr>
@@ -569,7 +659,7 @@ export default function AnalyticsPage() {
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {((posts.length === 0 && !scrapedData?.posts) || (posts.length === 0 && scrapedData?.posts?.length === 0)) ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-500 dark:text-gray-400">
+                      <td colSpan={8} className="py-8 text-center text-slate-500 dark:text-gray-400">
                         {postsLoading ? 'Loading posts...' : 'No posts found. Click "Collect LinkedIn Data" to fetch all available posts.'}
                       </td>
                     </tr>
@@ -618,6 +708,12 @@ export default function AnalyticsPage() {
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                             <MessageCircle className="w-3.5 h-3.5" />
                             {post.comments ?? 0}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center align-top whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 font-semibold text-orange-600 dark:text-orange-400">
+                            <Share2 className="w-3.5 h-3.5" />
+                            {post.shares ?? 0}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-600 dark:text-gray-300 align-top">
@@ -682,106 +778,115 @@ export default function AnalyticsPage() {
         </Card>
       )}
 
-      {/* Granular Details Dialog - Smooth 3xl curved edges */}
+      {/* Granular Details Dialog - Smooth 4-side curved edges */}
       <Dialog open={activeModal !== null} onOpenChange={(open) => !open && setActiveModal(null)}>
-        <DialogContent className="max-w-4xl bg-white dark:bg-gray-900 text-slate-900 dark:text-white border border-purple-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto rounded-3xl p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{activeModal} Details</h2>
+        <DialogContent className="max-w-4xl bg-white dark:bg-gray-900 text-slate-900 dark:text-white border border-purple-200 dark:border-gray-700 max-h-[85vh] rounded-3xl overflow-hidden flex flex-col p-0 shadow-2xl">
+          <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-slate-100 dark:border-gray-800 shrink-0">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white pr-8">{activeModal} Details</h2>
           </div>
           
-          {!scrapedData?.posts || scrapedData.posts.length === 0 ? (
-            <div className="text-slate-500 dark:text-gray-400 py-8 text-center">
-              No detailed post data available yet. Please click <strong>"Collect LinkedIn Data"</strong> first to scrape the latest details.
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {activeModal === 'Comments' && (
-                <div className="bg-indigo-50 dark:bg-blue-900/20 text-indigo-800 dark:text-blue-300 p-4 rounded-2xl text-sm border border-indigo-100 dark:border-blue-800/30">
-                  <strong>Note:</strong> The scraper configuration extracts total comment counts per post. Below are the posts that received comments.
-                </div>
-              )}
-              {activeModal === 'Views' && (
-                <div className="bg-indigo-50 dark:bg-blue-900/20 text-indigo-800 dark:text-blue-300 p-4 rounded-2xl text-sm border border-indigo-100 dark:border-blue-800/30">
-                  <strong>Note:</strong> Post impressions represent the total number of times each post was displayed on screen to LinkedIn users.
-                </div>
-              )}
-              
-              {(posts.length > 0 ? posts : (scrapedData?.posts || []))
-                .filter((p: any) => {
-                   if (activeModal === 'Comments') return (p.comments ?? 0) > 0;
-                   if (activeModal === 'Likes') return (p.likes ?? 0) > 0;
-                   if (activeModal === 'Views') return true;
-                   if (activeModal === 'All Posts' || activeModal === 'Recent Posts') return true;
-                   return false;
-                })
-                .map((post: any, idx: number) => (
-                <div key={idx} className="bg-slate-50 dark:bg-gray-800 p-6 rounded-2xl border border-purple-100 dark:border-gray-700 shadow-sm">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="font-semibold text-lg text-slate-900 dark:text-white">{cleanAuthor(post.author)}</h4>
-                      <p 
-                        className="text-xs text-slate-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5 cursor-help"
-                        title={getExactPostDateTooltip(post.postUrl, post.postDate)}
-                      >
-                        <Clock className="w-3 h-3 text-purple-500 shrink-0" />
-                        {getRealtimePostDate(post.postUrl, post.postDate)}
-                      </p>
-                    </div>
-                    {post.postUrl && (
-                      <a 
-                        href={post.postUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-full transition-colors flex items-center gap-1 font-medium shadow-md shadow-indigo-500/20"
-                      >
-                        View on LinkedIn <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+          <div className="overflow-y-auto flex-1 px-6 sm:px-8 py-6 custom-scrollbar space-y-5">
+            {!scrapedData?.posts || scrapedData.posts.length === 0 ? (
+              <div className="text-slate-500 dark:text-gray-400 py-12 text-center">
+                No detailed post data available yet. Please click <strong>"Collect LinkedIn Data"</strong> first to scrape the latest details.
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {activeModal === 'Comments' && (
+                  <div className="bg-indigo-50 dark:bg-blue-900/20 text-indigo-800 dark:text-blue-300 p-4 rounded-2xl text-sm border border-indigo-100 dark:border-blue-800/30">
+                    <strong>Note:</strong> The scraper configuration extracts total comment counts per post. Below are the posts that received comments.
                   </div>
-
-                  <div className="mb-4">
-                    <span className="text-[11px] font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider block mb-1">
-                      Post Description
-                    </span>
-                    {post.content && post.content.trim() ? (
-                      <div className="text-slate-800 dark:text-gray-200 text-sm whitespace-pre-wrap leading-relaxed bg-slate-100/70 dark:bg-black/20 p-4 rounded-2xl border border-slate-200/50 dark:border-white/5 font-normal">
-                        {post.content}
+                )}
+                {activeModal === 'Views' && (
+                  <div className="bg-indigo-50 dark:bg-blue-900/20 text-indigo-800 dark:text-blue-300 p-4 rounded-2xl text-sm border border-indigo-100 dark:border-blue-800/30">
+                    <strong>Note:</strong> Post impressions represent the total number of times each post was displayed on screen to LinkedIn users.
+                  </div>
+                )}
+                
+                {(posts.length > 0 ? posts : (scrapedData?.posts || []))
+                  .filter((p: any) => {
+                     if (activeModal === 'Comments') return (p.comments ?? 0) > 0;
+                     if (activeModal === 'Likes') return (p.likes ?? 0) > 0;
+                     if (activeModal === 'Shares') return (p.shares ?? 0) > 0;
+                     if (activeModal === 'Views') return true;
+                     if (activeModal === 'All Posts' || activeModal === 'Recent Posts') return true;
+                     return false;
+                  })
+                  .map((post: any, idx: number) => (
+                  <div key={idx} className="bg-slate-50 dark:bg-gray-800 p-6 rounded-2xl border border-purple-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-semibold text-lg text-slate-900 dark:text-white">{cleanAuthor(post.author)}</h4>
+                        <p 
+                          className="text-xs text-slate-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5 cursor-help"
+                          title={getExactPostDateTooltip(post.postUrl, post.postDate)}
+                        >
+                          <Clock className="w-3 text-purple-500 shrink-0" />
+                          {getRealtimePostDate(post.postUrl, post.postDate)}
+                        </p>
                       </div>
-                    ) : (
-                      <p className="text-xs italic text-slate-400 dark:text-gray-500 bg-slate-100 dark:bg-white/5 p-3 rounded-xl flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5" />
-                        No text description attached to this post (Media or photo post).
-                      </p>
-                    )}
+                      {post.postUrl && (
+                        <a 
+                          href={post.postUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-full transition-colors flex items-center gap-1 font-medium shadow-md shadow-indigo-500/20"
+                        >
+                          View on LinkedIn <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider block mb-1">
+                        Post Description
+                      </span>
+                      {post.content && post.content.trim() ? (
+                        <div className="text-slate-800 dark:text-gray-200 text-sm whitespace-pre-wrap leading-relaxed bg-slate-100/70 dark:bg-black/20 p-4 rounded-2xl border border-slate-200/50 dark:border-white/5 font-normal">
+                          {post.content}
+                        </div>
+                      ) : (
+                        <p className="text-xs italic text-slate-400 dark:text-gray-500 bg-slate-100 dark:bg-white/5 p-3 rounded-xl flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5" />
+                          No text description attached to this post (Media or photo post).
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-gray-400 border-t border-slate-200 dark:border-gray-700 pt-3">
+                      <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">
+                        <Eye className="w-4 h-4" /> {(post.impressions ?? post.views ?? 0).toLocaleString()} impressions
+                      </span>
+                      <span className="flex items-center gap-1 font-medium text-pink-600 dark:text-pink-400">
+                        <ThumbsUp className="w-4 h-4" /> {post.likes ?? 0}
+                      </span>
+                      <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                        <MessageCircle className="w-4 h-4" /> {post.comments ?? 0}
+                      </span>
+                      <span className="flex items-center gap-1 font-medium text-orange-600 dark:text-orange-400">
+                        <Share2 className="w-4 h-4" /> {post.shares ?? 0}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-gray-400 border-t border-slate-200 dark:border-gray-700 pt-3">
-                    <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">
-                      <Eye className="w-4 h-4" /> {(post.impressions ?? post.views ?? 0).toLocaleString()} impressions
-                    </span>
-                    <span className="flex items-center gap-1 font-medium text-pink-600 dark:text-pink-400">
-                      <ThumbsUp className="w-4 h-4" /> {post.likes ?? 0}
-                    </span>
-                    <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
-                      <MessageCircle className="w-4 h-4" /> {post.comments ?? 0}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              
-              {activeModal === 'Comments' && scrapedData.posts.filter((p: any) => (p.comments ?? 0) > 0).length === 0 && (
-                 <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have comments.</div>
-              )}
-              {activeModal === 'Likes' && scrapedData.posts.filter((p: any) => (p.likes ?? 0) > 0).length === 0 && (
-                 <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have likes.</div>
-              )}
-              {activeModal === 'Views' && scrapedData.posts.filter((p: any) => (p.impressions ?? p.views ?? 0) > 0).length === 0 && (
-                 <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have recorded impressions yet.</div>
-              )}
-              {activeModal && ['Followers', 'Shares'].includes(activeModal) && (
-                 <div className="text-slate-500 dark:text-gray-400 py-8 text-center">Granular per-post data for {activeModal} is not available via the public profile view.</div>
-              )}
-            </div>
-          )}
+                ))}
+                
+                {activeModal === 'Comments' && (posts.length > 0 ? posts : (scrapedData?.posts || [])).filter((p: any) => (p.comments ?? 0) > 0).length === 0 && (
+                   <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have comments.</div>
+                )}
+                {activeModal === 'Likes' && (posts.length > 0 ? posts : (scrapedData?.posts || [])).filter((p: any) => (p.likes ?? 0) > 0).length === 0 && (
+                   <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have likes.</div>
+                )}
+                {activeModal === 'Shares' && (posts.length > 0 ? posts : (scrapedData?.posts || [])).filter((p: any) => (p.shares ?? 0) > 0).length === 0 && (
+                   <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have recorded shares or reposts yet.</div>
+                )}
+                {activeModal === 'Views' && (posts.length > 0 ? posts : (scrapedData?.posts || [])).filter((p: any) => (p.impressions ?? p.views ?? 0) > 0).length === 0 && (
+                   <div className="text-slate-500 dark:text-gray-400 py-8 text-center">None of the recent posts have recorded impressions yet.</div>
+                )}
+                {activeModal === 'Followers' && (
+                   <div className="text-slate-500 dark:text-gray-400 py-8 text-center">Followers are tracked at the profile level ({effectiveFollowers.toLocaleString()} followers).</div>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -789,11 +894,11 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {[
           { label: 'Followers', value: effectiveFollowers, icon: Users, color: 'text-blue-500' },
-          { label: 'Views', value: latest.views ?? 0, icon: Eye, color: 'text-indigo-500' },
-          { label: 'Likes', value: latest.likes ?? 0, icon: ThumbsUp, color: 'text-pink-500' },
-          { label: 'Comments', value: latest.comments ?? 0, icon: MessageCircle, color: 'text-emerald-500' },
-          { label: 'Shares', value: latest.shares ?? 0, icon: Share2, color: 'text-orange-500' },
-          { label: 'All Posts', value: totalPosts || scrapedData?.posts?.length || latest.recentPosts || 0, icon: FileText, color: 'text-purple-600 dark:text-purple-400' },
+          { label: 'Views', value: effectiveViews, icon: Eye, color: 'text-indigo-500' },
+          { label: 'Likes', value: effectiveLikes, icon: ThumbsUp, color: 'text-pink-500' },
+          { label: 'Comments', value: effectiveComments, icon: MessageCircle, color: 'text-emerald-500' },
+          { label: 'Shares', value: effectiveShares, icon: Share2, color: 'text-orange-500' },
+          { label: 'All Posts', value: effectiveAllPosts, icon: FileText, color: 'text-purple-600 dark:text-purple-400' },
         ].map((stat, i) => (
           <Card 
             key={i} 

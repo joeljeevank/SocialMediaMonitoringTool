@@ -17,7 +17,9 @@ import {
   Plus
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, isHydrated, markHydrated } from '@/lib/data-cache';
 
 type Analytics = {
   likes: number;
@@ -54,14 +56,33 @@ type Channel = {
 };
 
 export default function ProfileDashboard() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [userDetails, setUserDetails] = useState({
-    name: '',
-    companyName: '',
-    companyRole: '',
-    role: '',
-    email: ''
+  // SSR-safe cache retrieval: returns null during initial SSR/hydration, cached data on client tab switch
+  const cachedAccounts = getSSRSafeCache<Account[]>(CacheKeys.ACCOUNTS);
+  const cachedChannels = getSSRSafeCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
+
+  const [accounts, setAccounts] = useState<Account[]>(() => cachedAccounts || []);
+  const [channels, setChannels] = useState<Channel[]>(() => cachedChannels || []);
+  const [accountsLoading, setAccountsLoading] = useState<boolean>(!cachedAccounts);
+  const [channelsLoading, setChannelsLoading] = useState<boolean>(!cachedChannels);
+
+  // Initialize user details safely without SSR mismatch
+  const [userDetails, setUserDetails] = useState(() => {
+    if (isHydrated() && typeof window !== 'undefined') {
+      return {
+        name: localStorage.getItem('user_name') || 'Administrator',
+        companyName: localStorage.getItem('company_name') || 'Enterprise Suite',
+        companyRole: localStorage.getItem('company_role') || 'Head of Analytics',
+        role: localStorage.getItem('user_role') || 'super_admin',
+        email: localStorage.getItem('user_email') || 'admin@example.com'
+      };
+    }
+    return {
+      name: 'Administrator',
+      companyName: 'Enterprise Suite',
+      companyRole: 'Head of Analytics',
+      role: 'super_admin',
+      email: 'admin@example.com'
+    };
   });
 
   // Settings Modal State
@@ -82,9 +103,12 @@ export default function ProfileDashboard() {
       if (res.ok) {
         const data = await res.json();
         setAccounts(data);
+        setInCache(CacheKeys.ACCOUNTS, data);
       }
     } catch (error) {
       console.error('Failed to fetch LinkedIn accounts', error);
+    } finally {
+      setAccountsLoading(false);
     }
   };
 
@@ -94,13 +118,17 @@ export default function ProfileDashboard() {
       if (res.ok) {
         const data = await res.json();
         setChannels(data);
+        setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
       }
     } catch (error) {
       console.error('Failed to fetch YouTube channels', error);
+    } finally {
+      setChannelsLoading(false);
     }
   };
 
   useEffect(() => {
+    markHydrated();
     setUserDetails({
       name: localStorage.getItem('user_name') || 'Administrator',
       companyName: localStorage.getItem('company_name') || 'Enterprise Suite',
@@ -108,6 +136,20 @@ export default function ProfileDashboard() {
       role: localStorage.getItem('user_role') || 'super_admin',
       email: localStorage.getItem('user_email') || 'admin@example.com'
     });
+
+    const acc = getFromCache<Account[]>(CacheKeys.ACCOUNTS);
+    if (acc) {
+      setAccounts(acc);
+      setAccountsLoading(false);
+    }
+
+    const ch = getFromCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
+    if (ch) {
+      setChannels(ch);
+      setChannelsLoading(false);
+    }
+
+    // Silent background revalidation
     fetchAccounts();
     fetchChannels();
   }, []);
@@ -203,7 +245,7 @@ export default function ProfileDashboard() {
                 <span>Account Settings</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+            <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 overflow-hidden shadow-2xl">
               <div className="mb-4">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <KeyRound className="w-5 h-5 text-indigo-600" />
@@ -348,7 +390,25 @@ export default function ProfileDashboard() {
           </Link>
         </div>
 
-        {accounts.length === 0 ? (
+        {accountsLoading && accounts.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a29] space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="w-9 h-9 rounded-full" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-3.5 w-24 rounded" />
+                    <Skeleton className="h-2.5 w-16 rounded" />
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                  <Skeleton className="h-3 w-16 rounded" />
+                  <Skeleton className="h-6 w-14 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : accounts.length === 0 ? (
           <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
             <p className="text-xs text-slate-500 dark:text-slate-400">No LinkedIn accounts connected yet.</p>
             <Link href="/dashboard" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline mt-1 inline-block">
@@ -429,7 +489,25 @@ export default function ProfileDashboard() {
           </Link>
         </div>
 
-        {channels.length === 0 ? (
+        {channelsLoading && channels.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a29] space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="w-9 h-9 rounded-full" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-3.5 w-24 rounded" />
+                    <Skeleton className="h-2.5 w-16 rounded" />
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                  <Skeleton className="h-3 w-16 rounded" />
+                  <Skeleton className="h-6 w-14 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : channels.length === 0 ? (
           <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
             <p className="text-xs text-slate-500 dark:text-slate-400">No YouTube channels connected yet.</p>
             <Link href="/dashboard/youtube" className="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline mt-1 inline-block">

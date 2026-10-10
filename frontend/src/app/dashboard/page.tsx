@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, markHydrated } from '@/lib/data-cache';
 import { 
   Plus, 
   Users, 
@@ -46,11 +47,12 @@ type Account = {
 };
 
 export default function DashboardOverview() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const cachedAccounts = getSSRSafeCache<Account[]>(CacheKeys.ACCOUNTS);
+  const [accounts, setAccounts] = useState<Account[]>(() => cachedAccounts || []);
   const [newUsername, setNewUsername] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [accountsLoading, setAccountsLoading] = useState(true);
+  const [accountsLoading, setAccountsLoading] = useState(!cachedAccounts);
 
   const fetchAccounts = async () => {
     try {
@@ -58,6 +60,7 @@ export default function DashboardOverview() {
       if (res.ok) {
         const data = await res.json();
         setAccounts(data);
+        setInCache(CacheKeys.ACCOUNTS, data);
       }
     } catch (error) {
       console.error('Failed to fetch accounts', error);
@@ -67,6 +70,12 @@ export default function DashboardOverview() {
   };
 
   useEffect(() => {
+    markHydrated();
+    const cached = getFromCache<Account[]>(CacheKeys.ACCOUNTS);
+    if (cached) {
+      setAccounts(cached);
+      setAccountsLoading(false);
+    }
     fetchAccounts();
   }, []);
 
@@ -162,7 +171,7 @@ export default function DashboardOverview() {
               <span>Connect Profile</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+          <DialogContent className="sm:max-w-md bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-2xl overflow-hidden">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
