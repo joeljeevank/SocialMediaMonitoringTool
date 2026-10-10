@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, 
+  LayoutDashboard,
   ThumbsUp, 
   MessageCircle, 
   Share2, 
@@ -436,19 +437,36 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => router.back()} 
-            className="text-slate-500 dark:text-gray-400 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full shrink-0 cursor-pointer"
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+        <div className="flex items-start gap-3 sm:gap-3.5">
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-500 dark:hover:text-indigo-400 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-all cursor-pointer shadow-xs shrink-0 group flex items-center justify-center mt-0.5"
+            aria-label="Back to LinkedIn Monitoring"
+            title="Back to LinkedIn Monitoring"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
+          </button>
+
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-400 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-indigo-600/30 mt-0.5">
+            <LayoutDashboard className="w-6 h-6" />
+          </div>
+
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Profile Analytics</h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-gray-400 mt-1">Detailed performance metrics for this account</p>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Profile Analytics
+              </h1>
+              {scrapedData?.accountInfo?.username && (
+                <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
+                  @{scrapedData.accountInfo.username}
+                </span>
+              )}
+            </div>
+            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">
+              Detailed performance metrics, post engagement, and audience telemetry
+            </p>
           </div>
         </div>
 

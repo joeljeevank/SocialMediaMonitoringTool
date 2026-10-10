@@ -20,7 +20,7 @@ export default function UserManagementPage() {
     const userRole = localStorage.getItem('user_role');
     setRole(userRole || '');
     if (userRole !== 'super_admin') {
-      router.push('/dashboard');
+      router.push('/dashboard/profile');
     } else {
       const u = getFromCache<any[]>(CacheKeys.SYSTEM_USERS);
       if (u) setManagers(u);
