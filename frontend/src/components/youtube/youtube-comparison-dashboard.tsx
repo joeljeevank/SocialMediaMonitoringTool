@@ -1102,8 +1102,8 @@ export function YouTubeComparisonDashboard() {
 
                       <td className="py-3 px-6 text-right whitespace-nowrap font-sans">
                         {topCh && topViews > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-                            👑 {topCh.title}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                            {topCh.title}
                           </span>
                         ) : (
                           <span className="text-slate-400 text-[11px]">—</span>
