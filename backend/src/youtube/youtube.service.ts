@@ -1338,4 +1338,193 @@ export class YoutubeService implements OnModuleInit {
       totalPages: Math.ceil(total / limit) || 1,
     };
   }
+
+  async compareChannels(channelIds: (number | string)[], range = '28d'): Promise<any> {
+    const allChannels = await this.channelRepo.find({
+      relations: { videos: true },
+      order: { subscribers: 'DESC' },
+    });
+
+    if (allChannels.length === 0) {
+      return {
+        channels: [],
+        timeseries: [],
+        leaders: null,
+        message: 'No YouTube channels connected yet.',
+      };
+    }
+
+    // Determine target channels (up to 3)
+    let selected: YouTubeChannel[] = [];
+    if (channelIds && channelIds.length > 0) {
+      selected = allChannels.filter((c) =>
+        channelIds.map(String).includes(String(c.id)) ||
+        channelIds.map(String).includes(c.channelId) ||
+        (c.customUrl && channelIds.map(String).includes(c.customUrl))
+      );
+    }
+
+    // If fewer than 2 channels were matched, pick the top 2 (or up to 3) available
+    if (selected.length < 2) {
+      selected = allChannels.slice(0, 3);
+    } else {
+      selected = selected.slice(0, 3);
+    }
+
+    const { startDate, endDate } = this.getDateRangeThreshold(range);
+
+    // Refresh realtime stats for selected channels
+    for (const c of selected) {
+      await this.ensureRealtimeDailyAnalytics(c);
+    }
+
+    // Query analytics for all selected channels in the date range
+    const analyticsRecords = await this.analyticsRepo.createQueryBuilder('analytics')
+      .leftJoinAndSelect('analytics.channel', 'channel')
+      .where('analytics.channelId IN (:...ids) AND analytics.date BETWEEN :startDate AND :endDate', {
+        ids: selected.map((c) => c.id),
+        startDate,
+        endDate,
+      })
+      .orderBy('analytics.date', 'ASC')
+      .getMany();
+
+    // Map by channelId -> Map<dateStr, record>
+    const analyticsByChannel = new Map<number, Map<string, YouTubeAnalytics>>();
+    for (const c of selected) {
+      analyticsByChannel.set(c.id, new Map());
+    }
+
+    for (const record of analyticsRecords) {
+      if (record.channel && analyticsByChannel.has(record.channel.id)) {
+        analyticsByChannel.get(record.channel.id)!.set(record.date, record);
+      }
+    }
+
+    // Build continuous daily timeline from startDate to endDate
+    const timeseries: any[] = [];
+    const runningSubs: Record<number, number> = {};
+    const runningViews: Record<number, number> = {};
+    const runningComments: Record<number, number> = {};
+
+    for (const c of selected) {
+      runningSubs[c.id] = 0;
+      runningViews[c.id] = 0;
+      runningComments[c.id] = 0;
+    }
+
+    const currentD = new Date(startDate);
+    const endD = new Date(endDate);
+
+    while (currentD <= endD) {
+      const dStr = currentD.toISOString().split('T')[0];
+      const dayRow: any = { date: dStr };
+
+      for (const ch of selected) {
+        const rec = analyticsByChannel.get(ch.id)?.get(dStr);
+        const dayViews = Number(rec?.views || 0);
+        const dayComments = Number(rec?.comments || 0);
+        const dayLikes = Number(rec?.likes || 0);
+        const dayGained = Number(rec?.subscribersGained || 0);
+        const dayLost = Number(rec?.subscribersLost || 0);
+        const dayNetGrowth = dayGained - dayLost;
+
+        dayRow[`views_${ch.id}`] = dayViews;
+        dayRow[`comments_${ch.id}`] = dayComments;
+        dayRow[`likes_${ch.id}`] = dayLikes;
+        dayRow[`growth_${ch.id}`] = dayNetGrowth;
+
+        runningSubs[ch.id] += dayNetGrowth;
+        runningViews[ch.id] += dayViews;
+        runningComments[ch.id] += dayComments;
+
+        dayRow[`cumGrowth_${ch.id}`] = runningSubs[ch.id];
+        dayRow[`cumViews_${ch.id}`] = runningViews[ch.id];
+        dayRow[`cumComments_${ch.id}`] = runningComments[ch.id];
+      }
+
+      timeseries.push(dayRow);
+      currentD.setDate(currentD.getDate() + 1);
+    }
+
+    // Compute period totals & channel summaries
+    const channelSummaries = selected.map((ch, index) => {
+      let periodViews = 0;
+      let periodComments = 0;
+      let periodLikes = 0;
+      let periodGained = 0;
+      let periodLost = 0;
+
+      const chMap = analyticsByChannel.get(ch.id);
+      if (chMap) {
+        for (const r of chMap.values()) {
+          periodViews += Number(r.views || 0);
+          periodComments += Number(r.comments || 0);
+          periodLikes += Number(r.likes || 0);
+          periodGained += Number(r.subscribersGained || 0);
+          periodLost += Number(r.subscribersLost || 0);
+        }
+      }
+
+      let totalVideoViews = 0;
+      let totalVideoComments = 0;
+      let totalVideoLikes = 0;
+      for (const v of ch.videos || []) {
+        totalVideoViews += Number(v.views || 0);
+        totalVideoComments += Number(v.comments || 0);
+        totalVideoLikes += Number(v.likes || 0);
+      }
+
+      const effectiveViews = periodViews > 0 ? periodViews : totalVideoViews;
+      const effectiveComments = periodComments > 0 ? periodComments : totalVideoComments;
+      const effectiveLikes = periodLikes > 0 ? periodLikes : totalVideoLikes;
+
+      const isOAuth = this.isChannelOAuth(ch);
+      const totalSubscribers = Number(ch.subscribers || 0);
+      const totalViews = Number(ch.totalViews || 0);
+      const totalVideos = Number(ch.totalVideos || ch.videos?.length || 0);
+      const avgViewsPerVideo = totalVideos > 0 ? Math.round(totalViews / totalVideos) : 0;
+      const engagementRate = effectiveViews > 0 ? ((effectiveLikes + effectiveComments) / effectiveViews) * 100 : 0;
+
+      return {
+        id: ch.id,
+        channelId: ch.channelId,
+        title: ch.title,
+        customUrl: ch.customUrl,
+        thumbnailUrl: ch.thumbnailUrl,
+        publishedAt: ch.publishedAt,
+        status: ch.status,
+        isOAuth,
+        authType: isOAuth ? 'oauth' : 'identifier',
+        totalSubscribers,
+        totalViews,
+        totalVideos,
+        periodViews: effectiveViews,
+        periodComments: effectiveComments,
+        periodLikes: effectiveLikes,
+        periodNetGrowth: periodGained - periodLost,
+        avgViewsPerVideo,
+        engagementRate: Math.round(engagementRate * 100) / 100,
+        slotIndex: index,
+      };
+    });
+
+    // Leaders
+    const viewsLeader = [...channelSummaries].sort((a, b) => b.periodViews - a.periodViews)[0];
+    const subsLeader = [...channelSummaries].sort((a, b) => b.totalSubscribers - a.totalSubscribers)[0];
+    const growthLeader = [...channelSummaries].sort((a, b) => b.periodNetGrowth - a.periodNetGrowth)[0];
+    const commentsLeader = [...channelSummaries].sort((a, b) => b.periodComments - a.periodComments)[0];
+
+    return {
+      channels: channelSummaries,
+      timeseries,
+      dateRange: { startDate, endDate, range },
+      leaders: {
+        views: viewsLeader ? { id: viewsLeader.id, title: viewsLeader.title, value: viewsLeader.periodViews } : null,
+        subscribers: subsLeader ? { id: subsLeader.id, title: subsLeader.title, value: subsLeader.totalSubscribers } : null,
+        growth: growthLeader ? { id: growthLeader.id, title: growthLeader.title, value: growthLeader.periodNetGrowth } : null,
+        comments: commentsLeader ? { id: commentsLeader.id, title: commentsLeader.title, value: commentsLeader.periodComments } : null,
+      },
+    };
+  }
 }

@@ -36,8 +36,10 @@ import {
   Check,
   Sparkles,
   ShieldCheck,
-  Lock
+  Lock,
+  BarChart2
 } from 'lucide-react';
+import { YouTubeComparisonDashboard } from '@/components/youtube/youtube-comparison-dashboard';
 import { 
   AreaChart, 
   Area, 
@@ -151,6 +153,18 @@ function YouTubeDashboardContent() {
   const urlChannelId = searchParams.get('channelId') || '';
   const [selectedChannelId, setSelectedChannelId] = useState<string>(urlChannelId);
   const [dateRange, setDateRange] = useState<string>('28d');
+
+  const urlTab = searchParams.get('tab') || 'single';
+  const [viewTab, setViewTab] = useState<'single' | 'compare'>(() => urlTab === 'compare' ? 'compare' : 'single');
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'compare') {
+      setViewTab('compare');
+    } else if (tabParam === 'single') {
+      setViewTab('single');
+    }
+  }, [searchParams]);
 
   const cachedOverview = urlChannelId ? getSSRSafeCache<any>(CacheKeys.YOUTUBE_OVERVIEW(urlChannelId, '28d')) : null;
   const cachedTimeseries = urlChannelId ? getSSRSafeCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(urlChannelId, '28d')) : null;
@@ -578,8 +592,55 @@ function YouTubeDashboardContent() {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+      {/* Top View Mode Switcher */}
+      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-semibold w-fit">
+        <button
+          type="button"
+          onClick={() => {
+            setViewTab('single');
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete('tab');
+            const q = params.toString();
+            router.push(q ? `/dashboard/youtube?${q}` : '/dashboard/youtube', { scroll: false });
+          }}
+          className={`py-2 px-3.5 rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+            viewTab === 'single'
+              ? 'bg-red-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <YoutubeIcon className="w-3.5 h-3.5" />
+          Single Channel Analytics
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setViewTab('compare');
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('tab', 'compare');
+            router.push(`/dashboard/youtube?${params.toString()}`, { scroll: false });
+          }}
+          className={`py-2 px-3.5 rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+            viewTab === 'compare'
+              ? 'bg-red-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          Channel Comparison (2-3 Channels)
+          <span className="py-0.5 px-1.5 rounded-full text-[9px] bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 font-extrabold uppercase">
+            New
+          </span>
+        </button>
+      </div>
+
+      {viewTab === 'compare' ? (
+        <YouTubeComparisonDashboard />
+      ) : (
+        <>
+          {/* Header Section */}
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div className="flex items-start gap-3 sm:gap-3.5">
           {isMounted && Boolean(selectedChannelId) && (
             <button
@@ -1420,6 +1481,8 @@ function YouTubeDashboardContent() {
         </div>
       </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Video Details Modal - Standard Dialog Layout */}
