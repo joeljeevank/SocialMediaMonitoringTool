@@ -10,7 +10,7 @@ import {
   User, 
   FileText,
   BarChart3,
-  ArrowLeft,
+  ArrowLeftRight,
   Menu,
   X,
   Shield,
@@ -107,7 +107,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/dashboard/youtube',
       label: 'YouTube Analytics',
       icon: YoutubeIcon,
-      active: activePath.startsWith('/dashboard/youtube'),
+      active: activePath === '/dashboard/youtube',
+    },
+    {
+      href: '/dashboard/youtube/compare',
+      label: 'YouTube Comparison',
+      icon: ArrowLeftRight,
+      active: activePath === '/dashboard/youtube/compare',
     },
     ...(userRole === 'super_admin' ? [
       {
@@ -164,6 +170,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const getPageTitle = () => {
     if (activePath === '/dashboard') return 'LinkedIn Monitoring';
+    if (activePath === '/dashboard/youtube/compare') return 'YouTube Comparison';
     if (activePath.startsWith('/dashboard/youtube')) return 'YouTube Intelligence';
     if (activePath === '/dashboard/profile') return 'Account Profile';
     if (activePath === '/dashboard/users') return 'User Management';
