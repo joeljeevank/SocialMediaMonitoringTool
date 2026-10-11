@@ -149,14 +149,14 @@ function YouTubeDashboardContent() {
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const cachedChannels = getSSRSafeCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
   const [channels, setChannels] = useState<Channel[]>(() => cachedChannels || []);
-  const initialChannelId = cachedChannels && cachedChannels.length > 0 ? (cachedChannels[0].id ? String(cachedChannels[0].id) : 'all') : '';
-  const [selectedChannelId, setSelectedChannelId] = useState<string>(initialChannelId);
+  const urlChannelId = searchParams.get('channelId') || '';
+  const [selectedChannelId, setSelectedChannelId] = useState<string>(urlChannelId);
   const [dateRange, setDateRange] = useState<string>('28d');
 
-  const cachedOverview = initialChannelId ? getSSRSafeCache<any>(CacheKeys.YOUTUBE_OVERVIEW(initialChannelId, '28d')) : null;
-  const cachedTimeseries = initialChannelId ? getSSRSafeCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(initialChannelId, '28d')) : null;
+  const cachedOverview = urlChannelId ? getSSRSafeCache<any>(CacheKeys.YOUTUBE_OVERVIEW(urlChannelId, '28d')) : null;
+  const cachedTimeseries = urlChannelId ? getSSRSafeCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(urlChannelId, '28d')) : null;
 
-  const [loading, setLoading] = useState<boolean>(!cachedOverview);
+  const [loading, setLoading] = useState<boolean>(false);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [overview, setOverview] = useState<any>(() => cachedOverview || null);
   const [timeseries, setTimeseries] = useState<any[]>(() => cachedTimeseries || []);
@@ -194,6 +194,11 @@ function YouTubeDashboardContent() {
     const status = searchParams.get('status');
     const message = searchParams.get('message');
     const channelTitle = searchParams.get('title');
+    const qChannelId = searchParams.get('channelId');
+
+    if (qChannelId !== null && qChannelId !== undefined) {
+      setSelectedChannelId(qChannelId);
+    }
 
     if (status === 'connected') {
       setNotification({
@@ -240,12 +245,6 @@ function YouTubeDashboardContent() {
       const data = res.data || [];
       setChannels(data);
       setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
-      setSelectedChannelId((prev) => {
-        if (!prev && data.length > 0) {
-          return data[0].id ? String(data[0].id) : 'all';
-        }
-        return prev;
-      });
     } catch (e) {
       console.error('Failed to fetch channels', e);
     }
@@ -324,7 +323,6 @@ function YouTubeDashboardContent() {
     const ch = getFromCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
     if (ch && ch.length > 0) {
       setChannels(ch);
-      setSelectedChannelId((prev) => prev || (ch[0].id ? String(ch[0].id) : 'all'));
     }
     fetchConfig();
     checkOAuthStatus();
@@ -334,7 +332,12 @@ function YouTubeDashboardContent() {
   // Channel & Date Range Overview / Analytics Effect with instant cached hydration
   useEffect(() => {
     const loadDashboardMetrics = async () => {
-      if (!selectedChannelId) return;
+      if (!selectedChannelId) {
+        setOverview(null);
+        setTimeseries([]);
+        setLoading(false);
+        return;
+      }
 
       const cachedOv = getFromCache<any>(CacheKeys.YOUTUBE_OVERVIEW(selectedChannelId, dateRange));
       const cachedTs = getFromCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(selectedChannelId, dateRange));
@@ -636,11 +639,20 @@ function YouTubeDashboardContent() {
             <select
               value={selectedChannelId}
               onChange={(e) => {
-                if (e.target.value === '__add__') {
+                const val = e.target.value;
+                if (val === '__add__') {
                   handleConnectClick('track');
                 } else {
-                  setSelectedChannelId(e.target.value);
+                  setSelectedChannelId(val);
                   setVideoPage(1);
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (val) {
+                    params.set('channelId', val);
+                  } else {
+                    params.delete('channelId');
+                  }
+                  const query = params.toString();
+                  router.push(query ? `/dashboard/youtube?${query}` : '/dashboard/youtube', { scroll: false });
                 }
               }}
               className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
@@ -688,7 +700,7 @@ function YouTubeDashboardContent() {
 
           {/* Export Report Button */}
           <Button
-            onClick={() => router.push(`/dashboard/reports?platform=youtube&channelId=${selectedChannelId}&range=${dateRange}`)}
+            onClick={() => router.push(selectedChannelId ? `/dashboard/reports?platform=youtube&channelId=${selectedChannelId}&range=${dateRange}` : `/dashboard/reports?platform=youtube`)}
             variant="outline"
             className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-red-500/30 hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
           >
@@ -904,8 +916,13 @@ function YouTubeDashboardContent() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setSelectedChannelId(String(ch.id));
+                        const val = String(ch.id);
+                        setSelectedChannelId(val);
                         setVideoPage(1);
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set('channelId', val);
+                        const query = params.toString();
+                        router.push(query ? `/dashboard/youtube?${query}` : '/dashboard/youtube', { scroll: false });
                       }}
                       className="rounded-full text-xs font-semibold h-8 px-3.5 hover:border-red-500 hover:text-red-500 cursor-pointer"
                     >
