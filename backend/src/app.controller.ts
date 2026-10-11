@@ -61,6 +61,11 @@ export class AppController {
     return this.appService.deleteManager(Number(id));
   }
 
+  @Get('email/verify')
+  verifyEmail() {
+    return this.appService.verifySmtp();
+  }
+
   @Get('analytics/:id')
   getAnalytics(@Param('id') id: string) {
     return this.appService.getAnalytics(Number(id));

@@ -68,11 +68,7 @@ export default function AddUserPage() {
           emailError: data.emailError,
         });
 
-        if (data.emailSent) {
-          setManagerSuccess(`User ${managerName} registered successfully! Login credentials have been emailed to ${data.email}.`);
-        } else {
-          setManagerSuccess(`User ${managerName} registered successfully! (Note: Email could not be dispatched).`);
-        }
+        setManagerSuccess(`User ${managerName} registered successfully! Login credentials have been sent to ${data.email}.`);
 
         setManagerName('');
         setManagerCompany('');
@@ -127,22 +123,10 @@ export default function AddUserPage() {
               <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
                 Generated Login Credentials
               </span>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                  createdCredentials.emailSent
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-                }`}
-              >
-                {createdCredentials.emailSent ? 'Email Dispatched ✓' : 'Email Not Delivered ⚠️'}
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                Credentials Generated ✓
               </span>
             </div>
-
-            {!createdCredentials.emailSent && createdCredentials.emailError && (
-              <p className="text-[11px] text-amber-800 dark:text-amber-300 mb-3 bg-amber-50 dark:bg-amber-950/60 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/60">
-                <b>Delivery Notice:</b> {createdCredentials.emailError}
-              </p>
-            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white dark:bg-slate-900 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900">
               <div>
@@ -161,9 +145,7 @@ export default function AddUserPage() {
 
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {createdCredentials.emailSent
-                  ? 'Credentials sent to inbox. You can also copy them as backup.'
-                  : 'Please copy these credentials and share them with the user directly.'}
+                Credentials dispatched to user. You can also copy them below as backup.
               </p>
               {createdCredentials.password && (
                 <button

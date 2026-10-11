@@ -103,65 +103,205 @@ export class AppService {
 
     await this.userRepo.save(newUser);
 
-    // Setup Nodemailer with real SMTP
-    const emailUser = process.env.EMAIL_USER?.trim();
-    // Google app passwords often contain spaces when copied, strip all spaces
-    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
-
-    let emailSent = false;
-    let emailError: string | null = null;
-
-    if (!emailUser || !emailPass) {
-      emailError = 'SMTP configuration missing: EMAIL_USER or EMAIL_PASS environment variable is not set in Render Dashboard.';
-      console.warn(`[AppService.createManager] ${emailError}`);
-    } else {
-      try {
-        console.log(`[AppService.createManager] Sending account email from ${emailUser} to ${data.email}...`);
-
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: emailUser,
-            pass: emailPass,
-          },
-          connectionTimeout: 10000,
-          greetingTimeout: 10000,
-        });
-
-        await transporter.sendMail({
-          from: `"MonitorHQ Admin" <${emailUser}>`,
-          to: data.email,
-          subject: 'Your Manager Account Details - MonitorHQ',
-          text: `Hello ${data.name},\n\nYour manager account for MonitorHQ has been created.\n\nUsername: ${data.email}\nPassword: ${generatedPassword}\n\nPlease login and connect your LinkedIn account.`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <h2 style="color: #4f46e5; margin-top: 0;">Welcome to MonitorHQ</h2>
-              <p>Hello <b>${data.name}</b>,</p>
-              <p>Your manager account for MonitorHQ has been created.</p>
-              <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; margin: 20px 0; border: 1px solid #cbd5e1;">
-                <p style="margin: 4px 0;"><b>Username:</b> <code>${data.email}</code></p>
-                <p style="margin: 4px 0;"><b>Temporary Password:</b> <code>${generatedPassword}</code></p>
-              </div>
-              <p>Please log in and connect your social media accounts.</p>
-              <p style="font-size: 12px; color: #64748b; margin-top: 30px;">This is an automated message. Please keep your login credentials secure.</p>
-            </div>
-          `,
-        });
-
-        emailSent = true;
-        console.log('[AppService.createManager] Real email successfully sent to: %s', data.email);
-      } catch (err: any) {
-        console.error('[AppService.createManager] Failed to send real email:', err);
-        emailError = err.message || 'SMTP delivery failed';
-      }
-    }
+    // Setup Nodemailer with resilient SMTP delivery
+    const emailResult = await this.sendAccountEmail(
+      data.email,
+      data.name,
+      generatedPassword,
+      data.role || 'manager',
+    );
 
     return {
       ...newUser,
       generatedPassword,
-      emailSent,
-      emailError,
+      emailSent: emailResult.success,
+      emailError: emailResult.error || null,
     };
+  }
+
+  /**
+   * Helper to send account credentials email with multiple SMTP fallback strategies
+   */
+  async sendAccountEmail(
+    toEmail: string,
+    name: string,
+    password: string,
+    role: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
+
+    if (!emailUser || !emailPass) {
+      const msg = 'EMAIL_USER or EMAIL_PASS environment variable is not configured in backend/.env';
+      console.warn(`[AppService.sendAccountEmail] ${msg}`);
+      return { success: false, error: msg };
+    }
+
+    const host = process.env.EMAIL_HOST?.trim();
+    const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : undefined;
+    const secure = process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE === 'true' : (port === 465);
+    const fromSender = process.env.EMAIL_FROM?.trim() || `"SocialPulse PRO" <${emailUser}>`;
+
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+        <div style="padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px;">
+          <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 700;">SocialPulse <span style="color: #6366f1;">PRO</span></h2>
+          <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Social Media Monitoring & Telemetry Suite</p>
+        </div>
+
+        <p style="color: #1e293b; font-size: 14px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+        <p style="color: #475569; font-size: 13px; line-height: 1.6;">Your <strong>${role}</strong> account for SocialPulse has been created. Use the credentials below to log into your workspace:</p>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+              <td style="color: #64748b; padding: 6px 0; width: 140px; font-weight: 500;">Username / Email:</td>
+              <td style="color: #0f172a; padding: 6px 0; font-weight: 600; font-family: monospace;">${toEmail}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Temporary Password:</td>
+              <td style="color: #4f46e5; padding: 6px 0; font-weight: 700; font-family: monospace; font-size: 15px;">${password}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Assigned Role:</td>
+              <td style="color: #0f172a; padding: 6px 0; font-weight: 600; text-transform: capitalize;">${role}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 13px; font-weight: 600; display: inline-block;">
+            Sign In to Dashboard →
+          </a>
+        </div>
+
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
+          For security, please change your temporary password after your initial login.<br />
+          This is an automated system notification from SocialPulse.
+        </p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: fromSender,
+      to: toEmail,
+      subject: 'Your SocialPulse Account Credentials',
+      text: `Hello ${name},\n\nYour ${role} account for SocialPulse has been created.\n\nUsername: ${toEmail}\nPassword: ${password}\n\nPlease sign in at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`,
+      html: htmlContent,
+    };
+
+    // Candidate transport configurations to try in sequence
+    const configs: nodemailer.TransportOptions[] = [];
+
+    if (host) {
+      configs.push({
+        host,
+        port: port || 587,
+        secure: secure ?? false,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+    } else {
+      // 1. Direct Gmail SMTP port 465 (SSL)
+      configs.push({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+
+      // 2. Direct Gmail SMTP port 587 (TLS/STARTTLS)
+      configs.push({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+
+      // 3. Nodemailer service: 'gmail'
+      configs.push({
+        service: 'gmail',
+        auth: { user: emailUser, pass: emailPass },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+    }
+
+    let lastError: any = null;
+
+    for (let i = 0; i < configs.length; i++) {
+      try {
+        console.log(`[AppService.sendAccountEmail] Attempting dispatch (${i + 1}/${configs.length}) from ${emailUser} to ${toEmail}...`);
+        const transporter = nodemailer.createTransport(configs[i]);
+        await transporter.sendMail(mailOptions);
+        console.log('[AppService.sendAccountEmail] Real email successfully delivered to: %s', toEmail);
+        return { success: true };
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[AppService.sendAccountEmail] Transport attempt ${i + 1} failed: ${err.message}`);
+      }
+    }
+
+    console.error('[AppService.sendAccountEmail] All delivery attempts failed:', lastError);
+    return { success: false, error: lastError?.message || 'SMTP delivery failed' };
+  }
+
+  /**
+   * Diagnostic method to verify SMTP connectivity
+   */
+  async verifySmtp(): Promise<{ configured: boolean; valid: boolean; emailUser?: string; error?: string; code?: string }> {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
+
+    if (!emailUser || !emailPass) {
+      return {
+        configured: false,
+        valid: false,
+        error: 'EMAIL_USER or EMAIL_PASS environment variable is missing in backend/.env',
+      };
+    }
+
+    const host = process.env.EMAIL_HOST?.trim();
+    const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : undefined;
+    const secure = process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE === 'true' : (port === 465);
+
+    const transportConfig = host
+      ? {
+          host,
+          port: port || 587,
+          secure: secure ?? false,
+          auth: { user: emailUser, pass: emailPass },
+          tls: { rejectUnauthorized: false },
+        }
+      : {
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: { user: emailUser, pass: emailPass },
+          tls: { rejectUnauthorized: false },
+        };
+
+    try {
+      const transporter = nodemailer.createTransport(transportConfig as any);
+      await transporter.verify();
+      return { configured: true, valid: true, emailUser };
+    } catch (err: any) {
+      return {
+        configured: true,
+        valid: false,
+        emailUser,
+        error: err.message,
+        code: err.code,
+      };
+    }
   }
 
   async deleteManager(id: number) {
