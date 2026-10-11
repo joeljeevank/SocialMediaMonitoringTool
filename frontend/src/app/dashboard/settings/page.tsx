@@ -24,11 +24,11 @@ import { API_BASE_URL } from '@/lib/api-config';
 import { isHydrated, markHydrated } from '@/lib/data-cache';
 
 export default function AccountSettingsPage() {
-  // Synchronously initialize account details from localStorage (zero delay)
-  const [name, setName] = useState(() => (isHydrated() && typeof window !== 'undefined' ? localStorage.getItem('user_name') || 'Administrator' : 'Administrator'));
-  const [email, setEmail] = useState(() => (isHydrated() && typeof window !== 'undefined' ? localStorage.getItem('user_email') || 'admin@example.com' : 'admin@example.com'));
-  const [companyName, setCompanyName] = useState(() => (isHydrated() && typeof window !== 'undefined' ? localStorage.getItem('company_name') || 'Enterprise Suite' : 'Enterprise Suite'));
-  const [companyRole, setCompanyRole] = useState(() => (isHydrated() && typeof window !== 'undefined' ? localStorage.getItem('company_role') || 'Head of Analytics' : 'Head of Analytics'));
+  // Synchronously initialize account details safely without SSR mismatch
+  const [name, setName] = useState('Administrator');
+  const [email, setEmail] = useState('admin@example.com');
+  const [companyName, setCompanyName] = useState('Enterprise Suite');
+  const [companyRole, setCompanyRole] = useState('Head of Analytics');
   const [profileSuccess, setProfileSuccess] = useState('');
 
   // Password State

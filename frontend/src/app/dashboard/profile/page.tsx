@@ -58,23 +58,12 @@ export default function ProfileDashboard() {
   const [channelsLoading, setChannelsLoading] = useState<boolean>(!cachedChannels);
 
   // Initialize user details safely without SSR mismatch
-  const [userDetails, setUserDetails] = useState(() => {
-    if (isHydrated() && typeof window !== 'undefined') {
-      return {
-        name: localStorage.getItem('user_name') || 'Administrator',
-        companyName: localStorage.getItem('company_name') || 'Enterprise Suite',
-        companyRole: localStorage.getItem('company_role') || 'Head of Analytics',
-        role: localStorage.getItem('user_role') || 'super_admin',
-        email: localStorage.getItem('user_email') || 'admin@example.com'
-      };
-    }
-    return {
-      name: 'Administrator',
-      companyName: 'Enterprise Suite',
-      companyRole: 'Head of Analytics',
-      role: 'super_admin',
-      email: 'admin@example.com'
-    };
+  const [userDetails, setUserDetails] = useState({
+    name: 'Administrator',
+    companyName: 'Enterprise Suite',
+    companyRole: 'Head of Analytics',
+    role: 'super_admin',
+    email: 'admin@example.com'
   });
 
   const fetchAccounts = async () => {
@@ -162,14 +151,12 @@ export default function ProfileDashboard() {
             </div>
           </div>
 
-          <Link href="/dashboard/settings">
-            <Button
-              variant="outline"
-              className="rounded-xl border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold px-4 py-2 gap-2 shrink-0 cursor-pointer"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Account Settings</span>
-            </Button>
+          <Link
+            href="/dashboard/settings"
+            className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold px-4 py-2 gap-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Account Settings</span>
           </Link>
         </div>
       </div>
@@ -190,11 +177,12 @@ export default function ProfileDashboard() {
               </p>
             </div>
           </div>
-          <Link href="/dashboard">
-            <Button className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer">
-              <Plus className="w-3.5 h-3.5" />
-              <span>Connect Account</span>
-            </Button>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Connect Account</span>
           </Link>
         </div>
 
@@ -226,7 +214,18 @@ export default function ProfileDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {accounts.map((acc) => {
-              const latestAnalytics = acc.analytics && acc.analytics.length > 0 ? acc.analytics[0] : null;
+              const sorted = acc.analytics && acc.analytics.length > 0
+                ? [...acc.analytics].sort((a: any, b: any) => {
+                    const timeA = new Date(a.lastCollectionTime || a.date || 0).getTime() || a.id || 0;
+                    const timeB = new Date(b.lastCollectionTime || b.date || 0).getTime() || b.id || 0;
+                    return timeA - timeB;
+                  })
+                : [];
+              const latestAnalytics = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+              const followersCount = (latestAnalytics?.followers && latestAnalytics.followers > 0)
+                ? latestAnalytics.followers
+                : (sorted.slice().reverse().find((x: any) => (x.followers || 0) > 0)?.followers ?? latestAnalytics?.followers);
+
               return (
                 <div 
                   key={acc.id} 
@@ -256,14 +255,17 @@ export default function ProfileDashboard() {
                     <div>
                       <span className="text-[10px] text-slate-400 block">Followers</span>
                       <span className="font-bold text-slate-900 dark:text-white">
-                        {latestAnalytics?.followers ? latestAnalytics.followers.toLocaleString() : '—'}
+                        {followersCount !== undefined && followersCount !== null
+                          ? Number(followersCount).toLocaleString()
+                          : '0'}
                       </span>
                     </div>
-                    <Link href={`/dashboard/${acc.id}`}>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 rounded-lg gap-1">
-                        <span>Analytics</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Button>
+                    <Link
+                      href={`/dashboard/${acc.id}`}
+                      className="inline-flex items-center h-7 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2.5 rounded-lg gap-1 transition-colors"
+                    >
+                      <span>Analytics</span>
+                      <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 </div>
@@ -289,11 +291,12 @@ export default function ProfileDashboard() {
               </p>
             </div>
           </div>
-          <Link href="/dashboard/youtube">
-            <Button className="h-8 px-3.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer">
-              <Plus className="w-3.5 h-3.5" />
-              <span>Connect Channel</span>
-            </Button>
+          <Link
+            href="/dashboard/youtube"
+            className="inline-flex items-center h-8 px-3.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Connect Channel</span>
           </Link>
         </div>
 
@@ -367,11 +370,12 @@ export default function ProfileDashboard() {
                       {ch.subscribers ? ch.subscribers.toLocaleString() : '—'}
                     </span>
                   </div>
-                  <Link href={`/dashboard/youtube`}>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 px-2 rounded-lg gap-1">
-                      <span>Analytics</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Button>
+                  <Link
+                    href={`/dashboard/youtube`}
+                    className="inline-flex items-center h-7 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 px-2.5 rounded-lg gap-1 transition-colors"
+                  >
+                    <span>Analytics</span>
+                    <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
               </div>

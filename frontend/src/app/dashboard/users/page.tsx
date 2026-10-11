@@ -13,7 +13,7 @@ export default function UserManagementPage() {
   const cachedUsers = getSSRSafeCache<any[]>(CacheKeys.SYSTEM_USERS);
   const [managers, setManagers] = useState<any[]>(() => cachedUsers || []);
   const [search, setSearch] = useState('');
-  const [role, setRole] = useState(() => (isHydrated() && typeof window !== 'undefined' ? localStorage.getItem('user_role') || '' : ''));
+  const [role, setRole] = useState<string>('');
 
   useEffect(() => {
     markHydrated();

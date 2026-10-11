@@ -201,11 +201,10 @@ export default function AddUserPage() {
               <Input
                 id="mgr-name"
                 type="text"
-                placeholder="e.g. Alex Mercer"
                 value={managerName}
                 onChange={(e) => setManagerName(e.target.value)}
                 required
-                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-10 px-3.5 rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-indigo-500"
               />
             </div>
 
@@ -216,11 +215,10 @@ export default function AddUserPage() {
               <Input
                 id="mgr-email"
                 type="email"
-                placeholder="e.g. alex@example.com"
                 value={managerEmail}
                 onChange={(e) => setManagerEmail(e.target.value)}
                 required
-                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-10 px-3.5 rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-indigo-500"
               />
             </div>
           </div>
@@ -233,11 +231,10 @@ export default function AddUserPage() {
               <Input
                 id="mgr-company"
                 type="text"
-                placeholder="e.g. Acme Corp"
                 value={managerCompany}
                 onChange={(e) => setManagerCompany(e.target.value)}
                 required
-                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-10 px-3.5 rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-indigo-500"
               />
             </div>
 
@@ -248,11 +245,10 @@ export default function AddUserPage() {
               <Input
                 id="mgr-company-role"
                 type="text"
-                placeholder="e.g. Social Lead"
                 value={managerCompanyRole}
                 onChange={(e) => setManagerCompanyRole(e.target.value)}
                 required
-                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-10 px-3.5 rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-indigo-500"
               />
             </div>
           </div>
@@ -265,10 +261,9 @@ export default function AddUserPage() {
               <Input
                 id="mgr-phone"
                 type="text"
-                placeholder="e.g. +1 555-0199"
                 value={managerPhone}
                 onChange={(e) => setManagerPhone(e.target.value)}
-                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-9 rounded-lg"
+                className="bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs h-10 px-3.5 rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-indigo-500"
               />
             </div>
 
@@ -280,7 +275,7 @@ export default function AddUserPage() {
                 id="mgr-role"
                 value={managerRole}
                 onChange={(e) => setManagerRole(e.target.value)}
-                className="w-full h-9 px-3 text-xs bg-slate-50 dark:bg-[#090d16] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-10 px-3.5 text-xs bg-slate-50 dark:bg-[#090d16] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
               >
                 <option value="manager">Manager (Read & Analytics)</option>
                 <option value="super_admin">Super Admin (Full System Access)</option>
@@ -289,19 +284,16 @@ export default function AddUserPage() {
           </div>
 
           <div className="pt-3 flex justify-end gap-2.5">
-            <Link href="/dashboard/users">
-              <Button
-                type="button"
-                variant="outline"
-                className="text-xs h-9 px-4 rounded-lg"
-              >
-                Cancel
-              </Button>
+            <Link
+              href="/dashboard/users"
+              className="inline-flex items-center justify-center text-xs h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-background hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors font-medium cursor-pointer"
+            >
+              Cancel
             </Link>
             <Button
               type="submit"
               disabled={managerAddLoading}
-              className="text-xs h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg gap-1.5 font-semibold"
+              className="text-xs h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-1.5 font-semibold cursor-pointer shadow-xs"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>{managerAddLoading ? 'Creating User...' : 'Create Account'}</span>

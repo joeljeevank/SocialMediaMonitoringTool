@@ -146,6 +146,7 @@ function YouTubeDashboardContent() {
   const searchParams = useSearchParams();
 
   // State Management with Instant Cache Hydration
+  const [isMounted, setIsMounted] = useState<boolean>(false);
   const cachedChannels = getSSRSafeCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
   const [channels, setChannels] = useState<Channel[]>(() => cachedChannels || []);
   const initialChannelId = cachedChannels && cachedChannels.length > 0 ? (cachedChannels[0].id ? String(cachedChannels[0].id) : 'all') : '';
@@ -318,6 +319,7 @@ function YouTubeDashboardContent() {
 
   // Initial Config & Channels Loading Effect (runs once or on OAuth status)
   useEffect(() => {
+    setIsMounted(true);
     markHydrated();
     const ch = getFromCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
     if (ch && ch.length > 0) {
@@ -577,7 +579,7 @@ function YouTubeDashboardContent() {
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
-          {Boolean(selectedChannelId) && (
+          {isMounted && Boolean(selectedChannelId) && (
             <button
               type="button"
               onClick={() => {

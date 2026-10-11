@@ -262,6 +262,11 @@ export class AppService {
       relations: {
         analytics: true,
       },
+      order: {
+        analytics: {
+          id: 'ASC',
+        },
+      },
     });
     this.accountsCache = { data: accounts, timestamp: Date.now() };
     return accounts;

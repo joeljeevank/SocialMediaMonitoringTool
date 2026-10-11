@@ -29,17 +29,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [optimisticPathname, setOptimisticPathname] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
   useEffect(() => {
     markHydrated();
-    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    const token = typeof window !== 'undefined'
+      ? (sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token'))
+      : null;
+
     if (!token) {
-      router.push('/');
+      setIsAuthenticated(false);
+      setIsAuthChecking(false);
+      router.replace('/');
       return;
-    } else {
-      setUserRole(localStorage.getItem('user_role'));
-      setUserName(localStorage.getItem('user_name') || 'Administrator');
     }
+
+    const role = sessionStorage.getItem('user_role') || localStorage.getItem('user_role');
+    const name = sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'Administrator';
+    setUserRole(role);
+    setUserName(name);
+    setIsAuthenticated(true);
+    setIsAuthChecking(false);
 
     // Prefetch all key dashboard routes for instant sub-second transitions
     router.prefetch('/dashboard/profile');
@@ -134,13 +145,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_email');
-    localStorage.removeItem('company_name');
-    localStorage.removeItem('company_role');
-    router.push('/');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('user_role');
+      sessionStorage.removeItem('user_name');
+      sessionStorage.removeItem('user_email');
+      sessionStorage.removeItem('company_name');
+      sessionStorage.removeItem('company_role');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('company_name');
+      localStorage.removeItem('company_role');
+    }
+    router.replace('/');
   };
 
   const getPageTitle = () => {
@@ -154,6 +173,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (activePath.startsWith('/dashboard/')) return 'Profile Analytics';
     return 'Dashboard';
   };
+
+  // Block rendering dashboard completely until authenticated
+  if (isAuthChecking || !isAuthenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-[#06080e] select-none">
+        <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-xs w-full">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <Shield className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h3 className="font-bold text-xs text-slate-900 dark:text-white">Authenticating Session</h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Redirecting to authentication...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-[#06080e] p-3 sm:p-4 md:p-6 gap-4 sm:gap-6 relative overflow-hidden select-none">

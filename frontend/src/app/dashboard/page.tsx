@@ -255,9 +255,9 @@ export default function DashboardOverview() {
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
+          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
             {accountsLoading ? <Skeleton className="h-8 w-14 my-0.5 rounded-lg" /> : accounts.length}
-          </p>
+          </div>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             Active monitoring handles
@@ -271,9 +271,9 @@ export default function DashboardOverview() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
+          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
             {accountsLoading ? <Skeleton className="h-8 w-20 my-0.5 rounded-lg" /> : totalFollowers.toLocaleString()}
-          </p>
+          </div>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Aggregated follower reach
@@ -287,9 +287,9 @@ export default function DashboardOverview() {
               <Eye className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
+          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-3">
             {accountsLoading ? <Skeleton className="h-8 w-20 my-0.5 rounded-lg" /> : totalImpressions.toLocaleString()}
-          </p>
+          </div>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Total post impressions
@@ -303,9 +303,9 @@ export default function DashboardOverview() {
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
             {accountsLoading ? <Skeleton className="h-8 w-14 my-0.5 rounded-lg" /> : `${syncedTodayCount} / ${accounts.length}`}
-          </p>
+          </div>
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Up-to-date collections
