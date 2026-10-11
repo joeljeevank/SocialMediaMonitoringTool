@@ -18,7 +18,8 @@ import {
   Video, 
   Sparkles,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  ArrowLeftRight
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -79,7 +80,7 @@ type ComparisonData = {
 
 export function YouTubeComparisonDashboard() {
   const [allChannels, setAllChannels] = useState<any[]>([]);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([0]);
   const [dateRange, setDateRange] = useState<string>('28d');
   const [activeMetricTab, setActiveMetricTab] = useState<'views' | 'growth' | 'comments' | 'all'>('views');
   const [chartType, setChartType] = useState<'area' | 'line' | 'bar'>('area');
@@ -87,41 +88,40 @@ export function YouTubeComparisonDashboard() {
   const [tableSearch, setTableSearch] = useState<string>('');
 
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
-  const [dataLoading, setDataLoading] = useState<boolean>(true);
+  const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  // 1. Fetch connected channels list
+  const validSelectedIds = useMemo(() => selectedIds.filter((id) => id > 0), [selectedIds]);
+
+  // 1. Fetch connected channels list without auto-selecting multiple
   const fetchAllChannels = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/youtube/channels`);
       if (res.ok) {
         const data = await res.json();
         setAllChannels(data || []);
-        // Pick initial 2 or 3 channels if none selected yet
-        if (selectedIds.length === 0 && Array.isArray(data) && data.length > 0) {
-          const initialIds = data.slice(0, Math.min(data.length, 3)).map((c: any) => c.id);
-          setSelectedIds(initialIds);
-        }
       }
     } catch (err) {
       console.error('Failed to fetch channels for comparison', err);
     }
-  }, [selectedIds.length]);
+  }, []);
 
   useEffect(() => {
     fetchAllChannels();
   }, [fetchAllChannels]);
 
-  // 2. Fetch comparative analytics when selected channels or date range changes
+  // 2. Fetch comparative analytics when 2 or more channels are selected
   const fetchComparisonData = useCallback(async () => {
-    if (selectedIds.length === 0) {
+    const validIds = selectedIds.filter((id) => id > 0);
+    if (validIds.length < 2) {
       setDataLoading(false);
+      setComparisonData(null);
       return;
     }
     try {
       setDataLoading(true);
       const query = new URLSearchParams({
-        channelIds: selectedIds.join(','),
+        channelIds: validIds.join(','),
         range: dateRange,
       });
       const res = await fetch(`${API_BASE_URL}/api/youtube/compare?${query.toString()}`);
@@ -138,8 +138,12 @@ export function YouTubeComparisonDashboard() {
   }, [selectedIds, dateRange]);
 
   useEffect(() => {
-    if (selectedIds.length > 0) {
+    const validIds = selectedIds.filter((id) => id > 0);
+    if (validIds.length >= 2) {
       fetchComparisonData();
+    } else {
+      setComparisonData(null);
+      setDataLoading(false);
     }
   }, [selectedIds, dateRange, fetchComparisonData]);
 
@@ -152,20 +156,15 @@ export function YouTubeComparisonDashboard() {
     });
   };
 
-  // Add a 3rd channel
-  const handleAddThirdChannel = () => {
+  // Add next channel slot
+  const handleAddChannelSlot = () => {
     if (selectedIds.length >= 3) return;
-    const available = allChannels.find((c) => !selectedIds.includes(c.id));
-    if (available) {
-      setSelectedIds((prev) => [...prev, available.id]);
-    } else if (allChannels.length > 0) {
-      setSelectedIds((prev) => [...prev, allChannels[0].id]);
-    }
+    setSelectedIds((prev) => [...prev, 0]);
   };
 
-  // Remove a channel slot (keep minimum 2)
+  // Remove a channel slot (keep Slot A)
   const handleRemoveChannel = (indexToRemove: number) => {
-    if (selectedIds.length <= 2) return;
+    if (selectedIds.length <= 1) return;
     setSelectedIds((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
@@ -297,7 +296,8 @@ export function YouTubeComparisonDashboard() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-1.5 text-xs h-9 font-semibold text-slate-700 dark:text-slate-200 shadow-xs appearance-none pr-8 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+              disabled={validSelectedIds.length < 2 || dataLoading}
+              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-1.5 text-xs h-9 font-semibold text-slate-700 dark:text-slate-200 shadow-xs appearance-none pr-8 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-colors disabled:opacity-50"
             >
               <option value="7d">Last 7 Days</option>
               <option value="14d">Last 14 Days</option>
@@ -314,9 +314,9 @@ export function YouTubeComparisonDashboard() {
               setRefreshing(true);
               fetchComparisonData();
             }}
-            disabled={dataLoading || refreshing}
+            disabled={validSelectedIds.length < 2 || dataLoading || refreshing}
             variant="outline"
-            className="rounded-xl text-xs font-semibold h-9 px-3.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1.5 shadow-xs cursor-pointer"
+            className="rounded-xl text-xs font-semibold h-9 px-3.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-red-500' : 'text-slate-500'}`} />
             <span>Sync Stats</span>
@@ -325,9 +325,9 @@ export function YouTubeComparisonDashboard() {
           {/* Export CSV Report Button */}
           <Button
             onClick={handleExportCsv}
-            disabled={!comparisonData || !comparisonData.timeseries?.length}
+            disabled={validSelectedIds.length < 2 || !comparisonData || !comparisonData.timeseries?.length || dataLoading}
             variant="outline"
-            className="rounded-xl text-xs font-semibold h-9 px-3.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1.5 shadow-xs cursor-pointer"
+            className="rounded-xl text-xs font-semibold h-9 px-3.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5 text-red-500" />
             <span>Export Comparison CSV</span>
@@ -335,26 +335,28 @@ export function YouTubeComparisonDashboard() {
         </div>
       </div>
 
-      {/* 2. Channel Slot Pickers Bar (2 or 3 Channel Slots) */}
+      {/* 2. Channel Slot Pickers Bar (1, 2, or 3 Channels) */}
       <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
           <div>
             <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-              Select 2 or 3 Channels to Benchmark
+              {selectedIds.length === 1 ? 'Select Channel to Benchmark' : 'Select 2 or 3 Channels to Benchmark'}
             </span>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Each channel is assigned a distinct color in graphs below for clear cross-comparison.
+              {selectedIds.length === 1
+                ? 'Select Channel A below and add another channel to unlock side-by-side comparison.'
+                : 'Each channel is assigned a distinct color in graphs below for clear cross-comparison.'}
             </p>
           </div>
-          {selectedIds.length < 3 && allChannels.length >= 3 && (
+          {selectedIds.length < 3 && allChannels.length > selectedIds.length && (
             <Button
               size="sm"
               variant="outline"
-              onClick={handleAddThirdChannel}
-              className="rounded-xl text-xs font-semibold h-8 px-3 border-emerald-300 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 gap-1 cursor-pointer"
+              onClick={handleAddChannelSlot}
+              className="rounded-xl text-xs font-semibold h-8 px-3 border-blue-300 dark:border-blue-800/60 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add 3rd Channel to Compare
+              {selectedIds.length === 1 ? 'Add Channel B to Compare' : 'Add 3rd Channel to Compare'}
             </Button>
           )}
         </div>
@@ -377,7 +379,7 @@ export function YouTubeComparisonDashboard() {
                       {colorTheme.label}
                     </span>
                   </div>
-                  {selectedIds.length > 2 && (
+                  {slotIndex > 0 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveChannel(slotIndex)}
@@ -391,12 +393,15 @@ export function YouTubeComparisonDashboard() {
 
                 <div className="relative">
                   <select
-                    value={chId}
+                    value={chId || 0}
                     onChange={(e) => handleSelectChannel(slotIndex, Number(e.target.value))}
                     className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white shadow-xs appearance-none pr-8 cursor-pointer"
                   >
+                    <option value="0">
+                      {slotIndex === 0 ? '-- Select Channel A --' : slotIndex === 1 ? '-- Select Channel B --' : '-- Select Channel C --'}
+                    </option>
                     {allChannels.map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id} disabled={selectedIds.includes(c.id) && c.id !== chId}>
                         {c.title} ({Number(c.subscribers || 0).toLocaleString()} subs)
                       </option>
                     ))}
@@ -404,7 +409,7 @@ export function YouTubeComparisonDashboard() {
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
 
-                {channelObj && (
+                {channelObj ? (
                   <div className="mt-2.5 flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px]">
                     {channelObj.thumbnailUrl ? (
                       <img
@@ -424,27 +429,114 @@ export function YouTubeComparisonDashboard() {
                       {Number(channelObj.subscribers || 0).toLocaleString()} subs
                     </span>
                   </div>
+                ) : (
+                  <div className="mt-2.5 flex items-center gap-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-400 dark:text-slate-500">
+                    <span>
+                      {slotIndex === 0 ? 'Select Channel A above' : 'Select another channel to compare'}
+                    </span>
+                  </div>
                 )}
               </div>
             );
           })}
 
-          {/* Add 3rd Channel Card if only 2 selected */}
-          {selectedIds.length === 2 && (
+          {/* Add Channel Button card in slot grid if fewer than 3 slots */}
+          {selectedIds.length < 3 && allChannels.length > selectedIds.length && (
             <button
               type="button"
-              onClick={handleAddThirdChannel}
-              className="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 rounded-xl p-5 flex flex-col items-center justify-center text-center gap-1.5 transition-all text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 cursor-pointer min-h-[110px]"
+              onClick={handleAddChannelSlot}
+              className="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-500/60 rounded-xl p-5 flex flex-col items-center justify-center text-center gap-1.5 transition-all text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 cursor-pointer min-h-[110px]"
             >
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                 <Plus className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold">Compare a 3rd Channel</span>
+              <span className="text-xs font-semibold">
+                {selectedIds.length === 1 ? 'Add Channel B to Compare' : 'Add 3rd Channel to Compare'}
+              </span>
               <span className="text-[10px] opacity-75">Click to add side-by-side slot</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Conditional Content: Initial State (< 2 channels) vs Loading Animation vs Details */}
+      {validSelectedIds.length < 2 ? (
+        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 sm:p-14 text-center shadow-xs">
+          <div className="max-w-md mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
+              <ArrowLeftRight className="w-7 h-7" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Benchmark 2 or 3 YouTube Channels
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {validSelectedIds.length === 0
+                  ? 'Start by selecting Channel A from the dropdown above.'
+                  : 'Channel A is selected! Add Channel B above to compare subscriber growth, views, and comments side-by-side.'}
+              </p>
+            </div>
+            {selectedIds.length === 1 && (
+              <Button
+                onClick={handleAddChannelSlot}
+                className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9 px-4 gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Channel B to Compare
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : dataLoading ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Main Animated Loader Card */}
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-10 sm:p-14 text-center shadow-xs relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-blue-500 to-emerald-500 animate-pulse" />
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-4 border-red-500/20 dark:border-red-500/10 border-t-red-500 animate-spin" />
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/50 text-red-600 flex items-center justify-center shadow-xs">
+                  <YoutubeIcon className="w-5 h-5 animate-pulse" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Comparing Channels & Calculating Metrics...
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Aggregating day-by-day subscriber growth, video view velocity, and audience engagement across selected channels.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 font-mono">
+                <RefreshCw className="w-3 h-3 animate-spin text-red-500" />
+                <span>Synchronizing cross-channel timeseries data...</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton Shimmers */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-28 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 animate-pulse p-4 flex flex-col justify-between">
+                <div className="w-24 h-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                <div className="w-32 h-6 bg-slate-200 dark:bg-slate-800 rounded-md" />
+                <div className="w-20 h-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+              </div>
+            ))}
+          </div>
+
+          <div className="h-80 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 animate-pulse p-6 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="w-40 h-4 bg-slate-200 dark:bg-slate-800 rounded-full" />
+              <div className="w-24 h-4 bg-slate-200 dark:bg-slate-800 rounded-full" />
+            </div>
+            <div className="w-full h-48 bg-slate-200/50 dark:bg-slate-800/40 rounded-xl" />
+          </div>
+        </div>
+      ) : comparisonData ? (
+        <>
 
       {/* 3. Executive Leader Highlights Strip */}
       {comparisonData?.leaders && (
@@ -1117,6 +1209,8 @@ export function YouTubeComparisonDashboard() {
           </table>
         </div>
       </div>
+        </>
+      ) : null}
     </div>
   );
 }
