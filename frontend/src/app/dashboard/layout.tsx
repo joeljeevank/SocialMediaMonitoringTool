@@ -16,8 +16,8 @@ import {
   Shield, 
   Home,
   Radio,
-  ArrowLeft,
   UserPlus,
+  ArrowLeftRight,
   Settings
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -60,6 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.prefetch('/dashboard/profile');
     router.prefetch('/dashboard');
     router.prefetch('/dashboard/youtube');
+    router.prefetch('/dashboard/youtube/compare');
     router.prefetch('/dashboard/reports');
     router.prefetch('/dashboard/users');
     router.prefetch('/dashboard/users/add');
@@ -93,7 +94,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   const activePath = optimisticPathname ?? pathname;
-
 
   const prefetchRoute = (href: string) => {
     try {
@@ -148,10 +148,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/dashboard/youtube',
       label: 'YouTube Analytics',
       icon: YoutubeIcon,
-      active: activePath.startsWith('/dashboard/youtube'),
+      active: activePath === '/dashboard/youtube',
       badge: 'Live Stream',
       activeBg: 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold border-red-500 shadow-sm shadow-red-500/10',
       iconBg: 'text-red-500',
+    },
+    {
+      href: '/dashboard/youtube/compare',
+      label: 'YouTube Comparison',
+      icon: ArrowLeftRight,
+      active: activePath === '/dashboard/youtube/compare',
+      badge: 'Compare',
+      activeBg: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold border-rose-500 shadow-sm shadow-rose-500/10',
+      iconBg: 'text-rose-500',
     },
     ...(userRole === 'super_admin' ? [
       {
@@ -191,6 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const getPageTitle = () => {
     if (activePath === '/dashboard') return 'LinkedIn Monitoring';
+    if (activePath === '/dashboard/youtube/compare') return 'YouTube Comparison';
     if (activePath.startsWith('/dashboard/youtube')) return 'YouTube Intelligence';
     if (activePath === '/dashboard/profile') return 'Account Profile';
     if (activePath === '/dashboard/users') return 'User Management';
