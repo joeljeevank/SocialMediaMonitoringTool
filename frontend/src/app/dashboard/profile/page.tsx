@@ -3,22 +3,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { 
   ArrowRight, 
   Settings, 
-  CheckCircle2, 
-  Eye, 
-  EyeOff, 
-  AlertCircle, 
-  KeyRound, 
-  Plus, 
-  ShieldCheck, 
+  Plus,
+  ShieldCheck,
   Building2
 } from 'lucide-react';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
+import { Skeleton } from '@/components/ui/skeleton';
+import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, isHydrated, markHydrated } from '@/lib/data-cache';
 
 type Analytics = {
   likes: number;
@@ -55,53 +50,56 @@ type Channel = {
 };
 
 export default function ProfileDashboard() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [userDetails, setUserDetails] = useState({
-    name: '',
-    companyName: '',
-    companyRole: '',
-    role: '',
-    email: ''
-  });
+  // SSR-safe cache retrieval: returns null during initial SSR/hydration, cached data on client tab switch
+  const cachedAccounts = getSSRSafeCache<Account[]>(CacheKeys.ACCOUNTS);
+  const cachedChannels = getSSRSafeCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
 
-  // Settings Modal State
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>(() => cachedAccounts || []);
+  const [channels, setChannels] = useState<Channel[]>(() => cachedChannels || []);
+  const [accountsLoading, setAccountsLoading] = useState<boolean>(!cachedAccounts);
+  const [channelsLoading, setChannelsLoading] = useState<boolean>(!cachedChannels);
+
+  // Initialize user details safely without SSR mismatch
+  const [userDetails, setUserDetails] = useState({
+    name: 'Administrator',
+    companyName: 'Enterprise Suite',
+    companyRole: 'Head of Analytics',
+    role: 'super_admin',
+    email: 'admin@example.com'
+  });
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch('http://localhost:3001/accounts');
+      const res = await fetch(`${API_BASE_URL}/accounts`);
       if (res.ok) {
         const data = await res.json();
         setAccounts(data);
+        setInCache(CacheKeys.ACCOUNTS, data);
       }
     } catch (error) {
       console.error('Failed to fetch LinkedIn accounts', error);
+    } finally {
+      setAccountsLoading(false);
     }
   };
 
   const fetchChannels = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/youtube/channels');
+      const res = await fetch(`${API_BASE_URL}/api/youtube/channels`);
       if (res.ok) {
         const data = await res.json();
         setChannels(data);
+        setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
       }
     } catch (error) {
       console.error('Failed to fetch YouTube channels', error);
+    } finally {
+      setChannelsLoading(false);
     }
   };
 
   useEffect(() => {
+    markHydrated();
     setUserDetails({
       name: localStorage.getItem('user_name') || 'Administrator',
       companyName: localStorage.getItem('company_name') || 'Enterprise Suite',
@@ -109,62 +107,23 @@ export default function ProfileDashboard() {
       role: localStorage.getItem('user_role') || 'super_admin',
       email: localStorage.getItem('user_email') || 'admin@example.com'
     });
+
+    const acc = getFromCache<Account[]>(CacheKeys.ACCOUNTS);
+    if (acc) {
+      setAccounts(acc);
+      setAccountsLoading(false);
+    }
+
+    const ch = getFromCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
+    if (ch) {
+      setChannels(ch);
+      setChannelsLoading(false);
+    }
+
+    // Silent background revalidation
     fetchAccounts();
     fetchChannels();
   }, []);
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError('');
-    setPasswordSuccess('');
-
-    if (!currentPassword) {
-      setPasswordError('Please enter your current password.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters long.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match.');
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch('http://localhost:3001/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword
-        })
-      });
-
-      if (res.ok) {
-        setPasswordSuccess('Password updated successfully.');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setTimeout(() => {
-          setIsSettingsOpen(false);
-          setPasswordSuccess('');
-        }, 2000);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setPasswordError(data.message || 'Failed to change password.');
-      }
-    } catch {
-      setPasswordError('Server connection error. Please try again.');
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -205,134 +164,13 @@ export default function ProfileDashboard() {
             </div>
           </div>
 
-          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-2xl border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold px-4 py-2.5 gap-2 shrink-0 shadow-sm cursor-pointer"
-              >
-                <Settings className="w-4 h-4 text-indigo-500" />
-                <span>Security Settings</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-white dark:bg-[#0c121e] border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-indigo-500" />
-                  Account Security
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Update credentials for {userDetails.email}
-                </p>
-              </div>
-
-              {passwordError && (
-                <div className="mb-3 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{passwordError}</span>
-                </div>
-              )}
-
-              {passwordSuccess && (
-                <div className="mb-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{passwordSuccess}</span>
-                </div>
-              )}
-
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="curr-pass" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Current Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="curr-pass"
-                      type={showCurrent ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                      className="text-xs h-10 pr-9 bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 rounded-xl"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrent(!showCurrent)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-pass" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    New Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="new-pass"
-                      type={showNew ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Minimum 6 characters"
-                      className="text-xs h-10 pr-9 bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 rounded-xl"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNew(!showNew)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm-pass" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Confirm New Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm-pass"
-                      type={showConfirm ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repeat new password"
-                      className="text-xs h-10 pr-9 bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 rounded-xl"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsSettingsOpen(false)}
-                    className="text-xs h-10 px-4 rounded-xl"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={passwordLoading}
-                    className="text-xs h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold"
-                  >
-                    {passwordLoading ? 'Saving...' : 'Update Password'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Link
+            href="/dashboard/settings"
+            className="inline-flex items-center rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold px-4 py-2.5 gap-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+          >
+            <Settings className="w-4 h-4 text-indigo-500" />
+            <span>Account Settings</span>
+          </Link>
         </div>
       </div>
 
@@ -365,7 +203,25 @@ export default function ProfileDashboard() {
           </Link>
         </div>
 
-        {accounts.length === 0 ? (
+        {accountsLoading && accounts.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-[#0c121e]/90 space-y-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-12 h-12 rounded-2xl" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-28 rounded" />
+                    <Skeleton className="h-3 w-16 rounded" />
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <Skeleton className="h-8 w-20 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : accounts.length === 0 ? (
           <div className="text-center py-12 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl bg-slate-50/50 dark:bg-black/20">
             <p className="text-xs text-slate-500 dark:text-slate-400">No LinkedIn accounts connected yet.</p>
             <Link href="/dashboard" className="text-xs text-sky-500 font-bold hover:underline mt-2 inline-block">
@@ -375,7 +231,18 @@ export default function ProfileDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {accounts.map((acc) => {
-              const latestAnalytics = acc.analytics && acc.analytics.length > 0 ? acc.analytics[0] : null;
+              const sorted = acc.analytics && acc.analytics.length > 0
+                ? [...acc.analytics].sort((a: any, b: any) => {
+                    const timeA = new Date(a.lastCollectionTime || a.date || 0).getTime() || a.id || 0;
+                    const timeB = new Date(b.lastCollectionTime || b.date || 0).getTime() || b.id || 0;
+                    return timeA - timeB;
+                  })
+                : [];
+              const latestAnalytics = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+              const followersCount = (latestAnalytics?.followers && latestAnalytics.followers > 0)
+                ? latestAnalytics.followers
+                : (sorted.slice().reverse().find((x: any) => (x.followers || 0) > 0)?.followers ?? latestAnalytics?.followers);
+
               return (
                 <div 
                   key={acc.id} 
@@ -405,7 +272,9 @@ export default function ProfileDashboard() {
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Followers</span>
                       <span className="font-extrabold text-slate-900 dark:text-white font-mono text-base">
-                        {latestAnalytics?.followers ? latestAnalytics.followers.toLocaleString() : '—'}
+                        {followersCount !== undefined && followersCount !== null && Number(followersCount) > 0
+                          ? Number(followersCount).toLocaleString()
+                          : (latestAnalytics?.followers ? latestAnalytics.followers.toLocaleString() : '—')}
                       </span>
                     </div>
                     <Link href={`/dashboard/${acc.id}`}>
@@ -451,7 +320,25 @@ export default function ProfileDashboard() {
           </Link>
         </div>
 
-        {channels.length === 0 ? (
+        {channelsLoading && channels.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-[#0c121e]/90 space-y-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-12 h-12 rounded-2xl" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-28 rounded" />
+                    <Skeleton className="h-3 w-16 rounded" />
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <Skeleton className="h-8 w-20 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : channels.length === 0 ? (
           <div className="text-center py-12 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl bg-slate-50/50 dark:bg-black/20">
             <p className="text-xs text-slate-500 dark:text-slate-400">No YouTube channels connected yet.</p>
             <Link href="/dashboard/youtube" className="text-xs text-red-500 font-bold hover:underline mt-2 inline-block">

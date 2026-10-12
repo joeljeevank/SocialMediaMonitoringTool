@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { API_BASE_URL } from '@/lib/api-config';
 import { 
   Lock, 
   User, 
@@ -31,8 +32,24 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [, startTransition] = useTransition();
 
-  // Aggressively prefetch all dashboard routes on mount for sub-second login redirects
+  // Do not auto-redirect on mount — always display login form first when starting the app
   useEffect(() => {
+    // Clear any previous/stale token so session authentication is always required on entry
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('user_role');
+      sessionStorage.removeItem('user_name');
+      sessionStorage.removeItem('user_email');
+      sessionStorage.removeItem('company_name');
+      sessionStorage.removeItem('company_role');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('company_name');
+      localStorage.removeItem('company_role');
+    }
+
     router.prefetch('/dashboard/profile');
     router.prefetch('/dashboard');
     router.prefetch('/dashboard/youtube');
@@ -61,7 +78,7 @@ export default function LoginPage() {
     prefetchDashboard();
 
     try {
-      const res = await fetch('http://localhost:3001/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUsername, password }),
@@ -69,15 +86,29 @@ export default function LoginPage() {
 
       if (res.ok) {
         const data = await res.json();
-        // Save session items synchronously
-        localStorage.setItem('admin_token', data.access_token);
-        localStorage.setItem('user_role', data.role);
-        if (data.name) localStorage.setItem('user_name', data.name);
-        if (data.companyName) localStorage.setItem('company_name', data.companyName);
-        if (data.companyRole) localStorage.setItem('company_role', data.companyRole);
-        if (data.email) localStorage.setItem('user_email', data.email);
+        // Save session items synchronously to both sessionStorage and localStorage
+        const token = data.access_token;
+        const role = data.role;
+        const name = data.name || (role === 'super_admin' ? 'Super Admin' : 'Manager');
+        const companyName = data.companyName || 'System Enterprise';
+        const companyRole = data.companyRole || 'Administrator';
+        const email = data.email || cleanUsername;
 
-        // Instant optimistic transition using prefetched route
+        sessionStorage.setItem('admin_token', token);
+        sessionStorage.setItem('user_role', role);
+        sessionStorage.setItem('user_name', name);
+        sessionStorage.setItem('company_name', companyName);
+        sessionStorage.setItem('company_role', companyRole);
+        sessionStorage.setItem('user_email', email);
+
+        localStorage.setItem('admin_token', token);
+        localStorage.setItem('user_role', role);
+        localStorage.setItem('user_name', name);
+        localStorage.setItem('company_name', companyName);
+        localStorage.setItem('company_role', companyRole);
+        localStorage.setItem('user_email', email);
+
+        // Transition into dashboard upon successful authentication
         startTransition(() => {
           router.push('/dashboard/profile');
         });
@@ -188,18 +219,40 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* Role-Specific Credentials Hint */}
+            {role === 'admin' ? (
+              <div className="mb-4 flex items-center justify-between text-[11px] bg-indigo-50/80 dark:bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 text-indigo-900 dark:text-indigo-300">
+                <span>Default credentials: <b>admin</b> / <b>admin123</b></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsername('admin');
+                    setPassword('admin123');
+                    setError('');
+                  }}
+                  className="font-bold text-indigo-600 dark:text-cyan-400 hover:underline cursor-pointer"
+                >
+                  Quick Fill
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 text-[11px] bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                Sign in with the email & temporary password provided by your Administrator.
+              </div>
+            )}
+
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="username" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Username or Email
+                  {role === 'admin' ? 'Admin Username' : 'Manager Email or Username'}
                 </Label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder={role === 'admin' ? 'Enter your credentials' : 'youremail@gmail.com'}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onFocus={prefetchDashboard}

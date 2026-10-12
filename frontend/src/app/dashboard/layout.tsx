@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
   LayoutDashboard, 
   Users, 
   LogOut, 
-  UserPlus, 
   User, 
   FileText,
   BarChart3, 
@@ -17,10 +16,14 @@ import {
   Shield, 
   Home,
   Radio,
+  ArrowLeft,
+  UserPlus,
   Settings
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
+import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, markHydrated } from '@/lib/data-cache';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -30,16 +33,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [optimisticPathname, setOptimisticPathname] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
-  const [, startTransition] = useTransition();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    markHydrated();
+    const token = typeof window !== 'undefined'
+      ? (sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token'))
+      : null;
+
     if (!token) {
-      router.push('/');
-    } else {
-      setUserRole(localStorage.getItem('user_role'));
-      setUserName(localStorage.getItem('user_name') || 'Administrator');
+      setIsAuthenticated(false);
+      setIsAuthChecking(false);
+      router.replace('/');
+      return;
     }
+
+    const role = sessionStorage.getItem('user_role') || localStorage.getItem('user_role');
+    const name = sessionStorage.getItem('user_name') || localStorage.getItem('user_name') || 'Administrator';
+    setUserRole(role);
+    setUserName(name);
+    setIsAuthenticated(true);
+    setIsAuthChecking(false);
 
     // Prefetch all key dashboard routes for instant sub-second transitions
     router.prefetch('/dashboard/profile');
@@ -49,6 +64,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.prefetch('/dashboard/users');
     router.prefetch('/dashboard/users/add');
     router.prefetch('/dashboard/settings');
+
+    // Pre-warm background cache so any clicked tab has its data ready instantly (0ms)
+    try {
+      if (!getFromCache(CacheKeys.ACCOUNTS)) {
+        fetch(`${API_BASE_URL}/accounts`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data) setInCache(CacheKeys.ACCOUNTS, data);
+          })
+          .catch(() => {});
+      }
+      if (!getFromCache(CacheKeys.YOUTUBE_CHANNELS)) {
+        fetch(`${API_BASE_URL}/api/youtube/channels`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data) setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
+          })
+          .catch(() => {});
+      }
+    } catch {}
   }, [router]);
 
   // Clear optimistic pathname when navigation completes
@@ -58,6 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname]);
 
   const activePath = optimisticPathname ?? pathname;
+
 
   const prefetchRoute = (href: string) => {
     try {
@@ -69,21 +105,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMobileMenuOpen(false);
     if (href !== pathname) {
       setOptimisticPathname(href);
-      setIsNavigating(true);
-      startTransition(() => {
-        router.push(href);
-      });
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_email');
-    localStorage.removeItem('company_name');
-    localStorage.removeItem('company_role');
-    router.push('/');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('user_role');
+      sessionStorage.removeItem('user_name');
+      sessionStorage.removeItem('user_email');
+      sessionStorage.removeItem('company_name');
+      sessionStorage.removeItem('company_role');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('company_name');
+      localStorage.removeItem('company_role');
+    }
+    router.replace('/');
   };
 
   // Nav Items with Cyber-Clean Glassmorphism Styling
@@ -161,6 +201,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return 'Dashboard';
   };
 
+  // Block rendering dashboard completely until authenticated
+  if (isAuthChecking || !isAuthenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-[#06080e] select-none">
+        <div className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-xs w-full">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <Shield className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h3 className="font-bold text-xs text-slate-900 dark:text-white">Authenticating Session</h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Redirecting to authentication...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen text-slate-900 dark:text-slate-100 overflow-hidden select-none bg-slate-50 dark:bg-[#06080e] relative">
       {/* Background ambient lighting */}
@@ -190,6 +249,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             href="/dashboard/profile" 
             prefetch={true} 
             onMouseEnter={() => prefetchRoute('/dashboard/profile')}
+            onFocus={() => prefetchRoute('/dashboard/profile')}
             onClick={() => handleNavClick('/dashboard/profile')}
             className="flex items-center gap-2.5 group"
           >

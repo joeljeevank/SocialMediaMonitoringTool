@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, markHydrated } from '@/lib/data-cache';
 import { 
   Plus, 
   Users, 
@@ -47,18 +48,20 @@ type Account = {
 };
 
 export default function DashboardOverview() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const cachedAccounts = getSSRSafeCache<Account[]>(CacheKeys.ACCOUNTS);
+  const [accounts, setAccounts] = useState<Account[]>(() => cachedAccounts || []);
   const [newUsername, setNewUsername] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [accountsLoading, setAccountsLoading] = useState(true);
+  const [accountsLoading, setAccountsLoading] = useState(!cachedAccounts);
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch('http://localhost:3001/accounts');
+      const res = await fetch(`${API_BASE_URL}/accounts`);
       if (res.ok) {
         const data = await res.json();
         setAccounts(data);
+        setInCache(CacheKeys.ACCOUNTS, data);
       }
     } catch (error) {
       console.error('Failed to fetch accounts', error);
@@ -68,6 +71,12 @@ export default function DashboardOverview() {
   };
 
   useEffect(() => {
+    markHydrated();
+    const cached = getFromCache<Account[]>(CacheKeys.ACCOUNTS);
+    if (cached) {
+      setAccounts(cached);
+      setAccountsLoading(false);
+    }
     fetchAccounts();
   }, []);
 
@@ -75,7 +84,7 @@ export default function DashboardOverview() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/accounts/connect', {
+      const res = await fetch(`${API_BASE_URL}/accounts/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +112,7 @@ export default function DashboardOverview() {
   const handleDisconnect = async (id: number) => {
     if (!confirm('Are you sure you want to disconnect this LinkedIn profile?')) return;
     try {
-      const res = await fetch(`http://localhost:3001/accounts/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/accounts/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {

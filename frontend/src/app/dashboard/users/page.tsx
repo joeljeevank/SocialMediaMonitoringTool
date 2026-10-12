@@ -5,29 +5,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Trash2, Plus, Search, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api-config';
+import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, isHydrated, markHydrated } from '@/lib/data-cache';
 
 export default function UserManagementPage() {
   const router = useRouter();
-  const [managers, setManagers] = useState<any[]>([]);
+  const cachedUsers = getSSRSafeCache<any[]>(CacheKeys.SYSTEM_USERS);
+  const [managers, setManagers] = useState<any[]>(() => cachedUsers || []);
   const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState<string>('');
 
   useEffect(() => {
+    markHydrated();
     const userRole = localStorage.getItem('user_role');
     setRole(userRole || '');
     if (userRole !== 'super_admin') {
-      router.push('/dashboard');
+      router.push('/dashboard/profile');
     } else {
+      const u = getFromCache<any[]>(CacheKeys.SYSTEM_USERS);
+      if (u) setManagers(u);
       fetchManagers();
     }
   }, [router]);
 
   const fetchManagers = async () => {
     try {
-      const res = await fetch('http://localhost:3001/managers');
+      const res = await fetch(`${API_BASE_URL}/managers`);
       if (res.ok) {
         const data = await res.json();
         setManagers(data);
+        setInCache(CacheKeys.SYSTEM_USERS, data);
       }
     } catch (error) {
       console.error('Failed to fetch managers', error);
@@ -38,7 +45,7 @@ export default function UserManagementPage() {
     if (!confirm('Are you sure you want to delete this user? They will no longer be able to log in.')) return;
     
     try {
-      const res = await fetch(`http://localhost:3001/managers/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/managers/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {

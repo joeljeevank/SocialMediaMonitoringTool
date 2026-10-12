@@ -103,32 +103,205 @@ export class AppService {
 
     await this.userRepo.save(newUser);
 
-    // Setup Nodemailer with real SMTP
-    try {
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // true for 465, false for other ports
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+    // Setup Nodemailer with resilient SMTP delivery
+    const emailResult = await this.sendAccountEmail(
+      data.email,
+      data.name,
+      generatedPassword,
+      data.role || 'manager',
+    );
 
-      const info = await transporter.sendMail({
-        from: `"MonitorHQ Admin" <${process.env.EMAIL_USER}>`,
-        to: data.email,
-        subject: 'Your Manager Account Details',
-        text: `Hello ${data.name},\n\nYour manager account for MonitorHQ has been created.\n\nUsername: ${data.email}\nPassword: ${generatedPassword}\n\nPlease login and connect your LinkedIn account.`,
-        html: `<p>Hello ${data.name},</p><p>Your manager account for MonitorHQ has been created.</p><p><b>Username:</b> ${data.email}<br/><b>Password:</b> ${generatedPassword}</p><p>Please login and connect your LinkedIn account.</p>`,
-      });
+    return {
+      ...newUser,
+      generatedPassword,
+      emailSent: emailResult.success,
+      emailError: emailResult.error || null,
+    };
+  }
 
-      console.log('Real email successfully sent to: %s', data.email);
-    } catch (err) {
-      console.error('Failed to send real email:', err);
+  /**
+   * Helper to send account credentials email with multiple SMTP fallback strategies
+   */
+  async sendAccountEmail(
+    toEmail: string,
+    name: string,
+    password: string,
+    role: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
+
+    if (!emailUser || !emailPass) {
+      const msg = 'EMAIL_USER or EMAIL_PASS environment variable is not configured in backend/.env';
+      console.warn(`[AppService.sendAccountEmail] ${msg}`);
+      return { success: false, error: msg };
     }
 
-    return newUser;
+    const host = process.env.EMAIL_HOST?.trim();
+    const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : undefined;
+    const secure = process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE === 'true' : (port === 465);
+    const fromSender = process.env.EMAIL_FROM?.trim() || `"SocialPulse PRO" <${emailUser}>`;
+
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+        <div style="padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px;">
+          <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 700;">SocialPulse <span style="color: #6366f1;">PRO</span></h2>
+          <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Social Media Monitoring & Telemetry Suite</p>
+        </div>
+
+        <p style="color: #1e293b; font-size: 14px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+        <p style="color: #475569; font-size: 13px; line-height: 1.6;">Your <strong>${role}</strong> account for SocialPulse has been created. Use the credentials below to log into your workspace:</p>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+              <td style="color: #64748b; padding: 6px 0; width: 140px; font-weight: 500;">Username / Email:</td>
+              <td style="color: #0f172a; padding: 6px 0; font-weight: 600; font-family: monospace;">${toEmail}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Temporary Password:</td>
+              <td style="color: #4f46e5; padding: 6px 0; font-weight: 700; font-family: monospace; font-size: 15px;">${password}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Assigned Role:</td>
+              <td style="color: #0f172a; padding: 6px 0; font-weight: 600; text-transform: capitalize;">${role}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 13px; font-weight: 600; display: inline-block;">
+            Sign In to Dashboard →
+          </a>
+        </div>
+
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
+          For security, please change your temporary password after your initial login.<br />
+          This is an automated system notification from SocialPulse.
+        </p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: fromSender,
+      to: toEmail,
+      subject: 'Your SocialPulse Account Credentials',
+      text: `Hello ${name},\n\nYour ${role} account for SocialPulse has been created.\n\nUsername: ${toEmail}\nPassword: ${password}\n\nPlease sign in at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`,
+      html: htmlContent,
+    };
+
+    // Candidate transport configurations to try in sequence
+    const configs: nodemailer.TransportOptions[] = [];
+
+    if (host) {
+      configs.push({
+        host,
+        port: port || 587,
+        secure: secure ?? false,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+    } else {
+      // 1. Direct Gmail SMTP port 465 (SSL)
+      configs.push({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+
+      // 2. Direct Gmail SMTP port 587 (TLS/STARTTLS)
+      configs.push({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+
+      // 3. Nodemailer service: 'gmail'
+      configs.push({
+        service: 'gmail',
+        auth: { user: emailUser, pass: emailPass },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      } as any);
+    }
+
+    let lastError: any = null;
+
+    for (let i = 0; i < configs.length; i++) {
+      try {
+        console.log(`[AppService.sendAccountEmail] Attempting dispatch (${i + 1}/${configs.length}) from ${emailUser} to ${toEmail}...`);
+        const transporter = nodemailer.createTransport(configs[i]);
+        await transporter.sendMail(mailOptions);
+        console.log('[AppService.sendAccountEmail] Real email successfully delivered to: %s', toEmail);
+        return { success: true };
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[AppService.sendAccountEmail] Transport attempt ${i + 1} failed: ${err.message}`);
+      }
+    }
+
+    console.error('[AppService.sendAccountEmail] All delivery attempts failed:', lastError);
+    return { success: false, error: lastError?.message || 'SMTP delivery failed' };
+  }
+
+  /**
+   * Diagnostic method to verify SMTP connectivity
+   */
+  async verifySmtp(): Promise<{ configured: boolean; valid: boolean; emailUser?: string; error?: string; code?: string }> {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
+
+    if (!emailUser || !emailPass) {
+      return {
+        configured: false,
+        valid: false,
+        error: 'EMAIL_USER or EMAIL_PASS environment variable is missing in backend/.env',
+      };
+    }
+
+    const host = process.env.EMAIL_HOST?.trim();
+    const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : undefined;
+    const secure = process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE === 'true' : (port === 465);
+
+    const transportConfig = host
+      ? {
+          host,
+          port: port || 587,
+          secure: secure ?? false,
+          auth: { user: emailUser, pass: emailPass },
+          tls: { rejectUnauthorized: false },
+        }
+      : {
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: { user: emailUser, pass: emailPass },
+          tls: { rejectUnauthorized: false },
+        };
+
+    try {
+      const transporter = nodemailer.createTransport(transportConfig as any);
+      await transporter.verify();
+      return { configured: true, valid: true, emailUser };
+    } catch (err: any) {
+      return {
+        configured: true,
+        valid: false,
+        emailUser,
+        error: err.message,
+        code: err.code,
+      };
+    }
   }
 
   async deleteManager(id: number) {
@@ -141,6 +314,12 @@ export class AppService {
     return { success: true };
   }
 
+  private accountsCache: { data: any; timestamp: number } | null = null;
+
+  public invalidateAccountsCache() {
+    this.accountsCache = null;
+  }
+
   async disconnectAccount(id: number) {
     const account = await this.accountRepo.findOne({ where: { id } });
     if (!account) {
@@ -151,6 +330,7 @@ export class AppService {
     await this.analyticsRepo.delete({ account: { id } });
     // Now delete the account
     await this.accountRepo.remove(account);
+    this.invalidateAccountsCache();
     return { success: true };
   }
 
@@ -164,14 +344,32 @@ export class AppService {
       account.profileUrl = data.profileUrl;
     }
     await this.accountRepo.save(account);
+    this.invalidateAccountsCache();
     return account;
   }
 
   async connectAccount(data: { platform: string; username: string }) {
+    const platform = data.platform || 'LinkedIn';
+    const cleanUsername = data.username.trim().replace(/^@/, '').replace(/\/+$/, '');
+
+    const existing = await this.accountRepo.findOne({
+      where: {
+        platform,
+        username: cleanUsername,
+      },
+      relations: {
+        analytics: true,
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
     const newAccount = this.accountRepo.create({
-      platform: data.platform || 'LinkedIn',
-      username: data.username,
-      profileUrl: `https://linkedin.com/in/${data.username}`,
+      platform,
+      username: cleanUsername,
+      profileUrl: `https://linkedin.com/in/${cleanUsername}`,
       status: 'Connected',
     });
 
@@ -191,16 +389,27 @@ export class AppService {
       account: saved,
     });
     await this.analyticsRepo.save([initialAnalytics]);
+    this.invalidateAccountsCache();
 
     return saved;
   }
 
   async getAccounts() {
-    return this.accountRepo.find({
+    if (this.accountsCache && Date.now() - this.accountsCache.timestamp < 15000) {
+      return this.accountsCache.data;
+    }
+    const accounts = await this.accountRepo.find({
       relations: {
         analytics: true,
       },
+      order: {
+        analytics: {
+          id: 'ASC',
+        },
+      },
     });
+    this.accountsCache = { data: accounts, timestamp: Date.now() };
+    return accounts;
   }
 
   async getAnalytics(accountId: number) {

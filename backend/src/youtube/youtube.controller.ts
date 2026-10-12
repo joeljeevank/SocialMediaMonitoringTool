@@ -87,6 +87,12 @@ export class YoutubeController {
     return this.youtubeService.getAnalyticsTimeseries(channelId, range);
   }
 
+  @Get('compare')
+  compareChannels(@Query('channelIds') channelIds?: string, @Query('range') range?: string) {
+    const ids = channelIds ? channelIds.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    return this.youtubeService.compareChannels(ids, range);
+  }
+
   @Get('videos')
   getVideos(
     @Query('channelId') channelId?: string,

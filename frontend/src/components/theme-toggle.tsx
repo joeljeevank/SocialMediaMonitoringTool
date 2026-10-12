@@ -13,7 +13,16 @@ export function ThemeToggle() {
   }, [])
 
   if (!mounted) {
-    return <div className="w-14 h-7 rounded-full bg-slate-200 dark:bg-slate-800" />
+    return (
+      <button
+        type="button"
+        disabled
+        aria-label="Toggle theme"
+        className="relative inline-flex h-7 w-14 items-center rounded-full bg-slate-200 dark:bg-slate-800 opacity-60 cursor-default"
+      >
+        <span className="sr-only">Toggle theme</span>
+      </button>
+    )
   }
 
   const currentTheme = theme === "system" ? resolvedTheme : theme
@@ -21,6 +30,7 @@ export function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={`relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
         isDark ? 'bg-purple-600' : 'bg-slate-300'

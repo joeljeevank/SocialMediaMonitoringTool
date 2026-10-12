@@ -2,9 +2,10 @@
 node_modules/
 dist/
 build/
-# Next.js
+# Next.js & Vercel
 .next/
 out/
+.vercel/
 
 # Environment files
 .env
