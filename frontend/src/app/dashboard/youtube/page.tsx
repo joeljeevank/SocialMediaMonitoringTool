@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -54,7 +55,6 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/lib/api-config';
-import { getFromCache, setInCache, CacheKeys, getSSRSafeCache, markHydrated } from '@/lib/data-cache';
 
 type Channel = {
   id: number;
@@ -103,11 +103,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     });
 
     return (
-      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-xl min-w-[210px] text-xs space-y-2 text-slate-900 dark:text-white">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1.5">
-          <span className="font-bold text-slate-900 dark:text-white">{dateFormatted}</span>
+      <div className="bg-slate-950/95 dark:bg-[#090d16]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl min-w-[210px] text-xs space-y-2">
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+          <span className="font-bold text-white">{dateFormatted}</span>
           {isToday && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               Live Telemetry
             </span>
@@ -123,9 +123,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               <div key={index} className="flex items-center justify-between gap-3 text-[11px]">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                  <span className="text-slate-600 dark:text-slate-300 font-medium">{entry.name}:</span>
+                  <span className="text-gray-300 font-medium">{entry.name}:</span>
                 </div>
-                <span className={`font-bold ${isGained && valNum > 0 ? 'text-emerald-600 dark:text-emerald-400' : isLost && valNum > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+                <span className={`font-bold ${isGained && valNum > 0 ? 'text-emerald-400' : isLost && valNum > 0 ? 'text-rose-400' : 'text-white'}`}>
                   {isGained && valNum > 0 ? `+${valNum.toLocaleString()}` : ''}
                   {isLost && valNum > 0 ? `-${valNum.toLocaleString()}` : ''}
                   {!isGained && !isLost ? valNum.toLocaleString() : (valNum === 0 ? '0' : '')}
@@ -144,22 +144,14 @@ function YouTubeDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // State Management with Instant Cache Hydration
-  const [isMounted, setIsMounted] = useState<boolean>(false);
-  const cachedChannels = getSSRSafeCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
-  const [channels, setChannels] = useState<Channel[]>(() => cachedChannels || []);
-  const urlChannelId = searchParams.get('channelId') || '';
-  const [selectedChannelId, setSelectedChannelId] = useState<string>(urlChannelId);
+  // State Management
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [dateRange, setDateRange] = useState<string>('28d');
-
-
-  const cachedOverview = urlChannelId ? getSSRSafeCache<any>(CacheKeys.YOUTUBE_OVERVIEW(urlChannelId, '28d')) : null;
-  const cachedTimeseries = urlChannelId ? getSSRSafeCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(urlChannelId, '28d')) : null;
-
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
-  const [overview, setOverview] = useState<any>(() => cachedOverview || null);
-  const [timeseries, setTimeseries] = useState<any[]>(() => cachedTimeseries || []);
+  const [overview, setOverview] = useState<any>(null);
+  const [timeseries, setTimeseries] = useState<any[]>([]);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [videoTotal, setVideoTotal] = useState<number>(0);
   const [videoPage, setVideoPage] = useState<number>(1);
@@ -194,11 +186,6 @@ function YouTubeDashboardContent() {
     const status = searchParams.get('status');
     const message = searchParams.get('message');
     const channelTitle = searchParams.get('title');
-    const qChannelId = searchParams.get('channelId');
-
-    if (qChannelId !== null && qChannelId !== undefined) {
-      setSelectedChannelId(qChannelId);
-    }
 
     if (status === 'connected') {
       setNotification({
@@ -242,9 +229,7 @@ function YouTubeDashboardContent() {
   const fetchChannels = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/youtube/channels`);
-      const data = res.data || [];
-      setChannels(data);
-      setInCache(CacheKeys.YOUTUBE_CHANNELS, data);
+      setChannels(res.data || []);
     } catch (e) {
       console.error('Failed to fetch channels', e);
     }
@@ -261,7 +246,6 @@ function YouTubeDashboardContent() {
         params: { channelId: selectedChannelId, range: dateRange },
       });
       setOverview(res.data);
-      setInCache(CacheKeys.YOUTUBE_OVERVIEW(selectedChannelId, dateRange), res.data);
     } catch (e) {
       console.error('Failed to fetch overview stats', e);
     }
@@ -278,7 +262,6 @@ function YouTubeDashboardContent() {
         params: { channelId: selectedChannelId, range: dateRange },
       });
       setTimeseries(res.data || []);
-      setInCache(CacheKeys.YOUTUBE_TIMESERIES(selectedChannelId, dateRange), res.data || []);
     } catch (e) {
       console.error('Failed to fetch analytics timeseries', e);
     }
@@ -318,46 +301,25 @@ function YouTubeDashboardContent() {
 
   // Initial Config & Channels Loading Effect (runs once or on OAuth status)
   useEffect(() => {
-    setIsMounted(true);
-    markHydrated();
-    const ch = getFromCache<Channel[]>(CacheKeys.YOUTUBE_CHANNELS);
-    if (ch && ch.length > 0) {
-      setChannels(ch);
-    }
     fetchConfig();
     checkOAuthStatus();
     fetchChannels();
   }, [fetchConfig, checkOAuthStatus, fetchChannels]);
 
-  // Channel & Date Range Overview / Analytics Effect with instant cached hydration
+  // Channel & Date Range Overview / Analytics Effect
   useEffect(() => {
     const loadDashboardMetrics = async () => {
-      if (!selectedChannelId) {
-        setOverview(null);
-        setTimeseries([]);
-        setLoading(false);
-        return;
+      setLoading(true);
+      if (selectedChannelId) {
+        await Promise.all([
+          fetchOverview(),
+          fetchTimeseries(),
+        ]);
       }
-
-      const cachedOv = getFromCache<any>(CacheKeys.YOUTUBE_OVERVIEW(selectedChannelId, dateRange));
-      const cachedTs = getFromCache<any[]>(CacheKeys.YOUTUBE_TIMESERIES(selectedChannelId, dateRange));
-
-      if (cachedOv) setOverview(cachedOv);
-      if (cachedTs) setTimeseries(cachedTs);
-
-      // Only show full loading skeleton if we have neither overview nor timeseries cached
-      if (!cachedOv && !cachedTs) {
-        setLoading(true);
-      }
-
-      await Promise.all([
-        fetchOverview(),
-        fetchTimeseries(),
-      ]);
       setLoading(false);
     };
     loadDashboardMetrics();
-  }, [fetchOverview, fetchTimeseries, selectedChannelId, dateRange]);
+  }, [fetchOverview, fetchTimeseries, selectedChannelId]);
 
   // Separate Fast Videos Loading Effect (runs instantly on page/search/sort change without freezing dashboard)
   useEffect(() => {
@@ -519,16 +481,16 @@ function YouTubeDashboardContent() {
       {/* Top Banner / Alert */}
       {notification && (
         <div
-          className={`flex items-center gap-3 p-4 rounded-2xl border text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-xs ${
+          className={`flex items-center gap-3 p-4 rounded-2xl border text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg ${
             notification.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-              : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 shadow-emerald-500/5'
+              : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300 shadow-red-500/5'
           }`}
         >
           {notification.type === 'success' ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
           )}
           <div className="flex-1">
             <p className="font-semibold">{notification.type === 'success' ? 'Operation Completed' : 'Attention'}</p>
@@ -538,7 +500,7 @@ function YouTubeDashboardContent() {
             variant="ghost"
             size="sm"
             onClick={() => setNotification(null)}
-            className="text-xs h-7 px-2.5 rounded-xl opacity-70 hover:opacity-100 cursor-pointer"
+            className="text-xs h-7 px-2 rounded-full opacity-70 hover:opacity-100"
           >
             Dismiss
           </Button>
@@ -547,20 +509,20 @@ function YouTubeDashboardContent() {
 
       {/* Public Identifier Information Banner - ONLY shown for Public Identifier channels */}
       {isIdentifierChannel && activeChannel && !isChannelOAuth(activeChannel) && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 text-amber-900 dark:text-amber-200 shadow-sm backdrop-blur-md">
           <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 border border-amber-200 dark:border-amber-800">
-              <Key className="w-4 h-4" />
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 border border-amber-500/30 shadow-inner">
+              <Key className="w-5 h-5" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   Channel "{activeChannel.title}" Connected via Public Identifier
                 </h3>
-                <span className="py-0.5 px-2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                <span className="py-0.5 px-2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                   Public Metadata Only
                 </span>
-                <span className="py-0.5 px-2 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60">
+                <span className="py-0.5 px-2 rounded-full text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
                   Cannot Access YouTube Studio
                 </span>
               </div>
@@ -571,7 +533,7 @@ function YouTubeDashboardContent() {
           </div>
           <Button
             onClick={() => handleConnectClick('oauth')}
-            className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs h-9 px-4 shrink-0 shadow-xs gap-1.5 cursor-pointer"
+            className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold text-xs px-4 py-2 shrink-0 shadow-md shadow-red-600/20 gap-1.5 cursor-pointer"
           >
             <YoutubeIcon className="w-3.5 h-3.5" />
             Connect via Google OAuth
@@ -580,9 +542,9 @@ function YouTubeDashboardContent() {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
         <div className="flex items-start gap-3 sm:gap-3.5">
-          {isMounted && Boolean(selectedChannelId) && (
+          {Boolean(selectedChannelId) && (
             <button
               type="button"
               onClick={() => {
@@ -593,25 +555,25 @@ function YouTubeDashboardContent() {
                 const query = params.toString();
                 router.push(query ? `/dashboard/youtube?${query}` : '/dashboard/youtube');
               }}
-              className="w-9 h-9 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 hover:border-red-500/40 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all cursor-pointer shadow-xs shrink-0 group flex items-center justify-center mt-0.5"
+              className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 hover:border-red-500/40 dark:hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-950/30 transition-all cursor-pointer shadow-xs shrink-0 group flex items-center justify-center mt-0.5"
               aria-label="Back to Channels Overview"
               title="Back to Channels Overview"
             >
-              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+              <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
             </button>
           )}
 
-          <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-            <YoutubeIcon className="w-5 h-5 text-white" />
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 to-pink-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-red-600/30 mt-0.5">
+            <YoutubeIcon className="w-6 h-6" />
           </div>
 
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                 YouTube Dashboard
               </h1>
               <span
-                className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 shadow-xs"
+                className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm"
                 title="Live real-time subscriber and analytics telemetry"
               >
                 <span className="relative flex h-2 w-2">
@@ -621,55 +583,46 @@ function YouTubeDashboardContent() {
                 Real-Time Live Active
               </span>
               {lastLiveUpdated && (
-                <span className="inline-flex items-center gap-1 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
+                <span className="inline-flex items-center gap-1 py-0.5 px-2.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm">
                   ⚡ Live updated {lastLiveUpdated}
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">
               Live multi-channel performance, audience metrics, and video analytics
             </p>
           </div>
         </div>
 
         {/* Global Action Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Channel Selector Dropdown */}
           <div className="relative min-w-[200px]">
             <select
               value={selectedChannelId}
               onChange={(e) => {
-                const val = e.target.value;
-                if (val === '__add__') {
+                if (e.target.value === '__add__') {
                   handleConnectClick('track');
                 } else {
-                  setSelectedChannelId(val);
+                  setSelectedChannelId(e.target.value);
                   setVideoPage(1);
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (val) {
-                    params.set('channelId', val);
-                  } else {
-                    params.delete('channelId');
-                  }
-                  const query = params.toString();
-                  router.push(query ? `/dashboard/youtube?${query}` : '/dashboard/youtube', { scroll: false });
                 }
               }}
-              className="w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-xl px-3.5 py-2 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/40 transition-all shadow-xs h-9"
+              className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-9 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
-              <option value="" className="bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white py-1">
+              <option value="" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
                 Select Channel
               </option>
               {channels.map((ch) => (
-                <option key={ch.id} value={ch.id} className="bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white py-1">
+                <option key={ch.id} value={ch.id} className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white py-1">
                   {ch.title} {ch.isOAuth ? '[Studio]' : '[Public]'}
                 </option>
               ))}
-              <option value="__add__" className="bg-white dark:bg-[#0f172a] text-red-500 font-bold py-1">
+              <option value="__add__" className="bg-white dark:bg-[#090d16] text-red-500 font-bold py-1">
                 + Track / Connect Channel...
               </option>
             </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* Date Range Selector */}
@@ -677,14 +630,14 @@ function YouTubeDashboardContent() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-xl px-3.5 py-2 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/40 transition-all shadow-xs h-9"
+              className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs font-semibold rounded-full px-4 py-2.5 pr-8 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all shadow-sm"
             >
-              <option value="7d" className="bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white">Last 7 Days</option>
-              <option value="28d" className="bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white">Last 28 Days</option>
-              <option value="90d" className="bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white">Last 90 Days</option>
-              <option value="1y" className="bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white">Last Year</option>
+              <option value="7d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 7 Days</option>
+              <option value="28d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 28 Days</option>
+              <option value="90d" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last 90 Days</option>
+              <option value="1y" className="bg-white dark:bg-[#090d16] text-slate-900 dark:text-white">Last Year</option>
             </select>
-            <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* Sync Button */}
@@ -692,45 +645,45 @@ function YouTubeDashboardContent() {
             onClick={handleSync}
             disabled={syncing || channels.length === 0}
             variant="outline"
-            className="rounded-xl text-xs font-semibold h-9 px-3.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1.5 shadow-xs cursor-pointer"
+            className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing || isLiveRefreshing ? 'animate-spin text-red-500' : ''}`} />
-            <span>{syncing ? 'Syncing...' : isLiveRefreshing ? 'Updating...' : 'Sync Now'}</span>
+            {syncing ? 'Syncing...' : isLiveRefreshing ? 'Updating...' : 'Sync Now'}
           </Button>
 
           {/* Export Report Button */}
           <Button
-            onClick={() => router.push(selectedChannelId ? `/dashboard/reports?platform=youtube&channelId=${selectedChannelId}&range=${dateRange}` : `/dashboard/reports?platform=youtube`)}
+            onClick={() => router.push(`/dashboard/reports?platform=youtube&channelId=${selectedChannelId}&range=${dateRange}`)}
             variant="outline"
-            className="rounded-xl text-xs font-semibold h-9 px-3.5 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 gap-1.5 shadow-xs cursor-pointer"
+            className="rounded-full text-xs font-semibold px-4 py-2.5 border-slate-200 dark:border-red-500/30 hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-700 dark:text-gray-200 gap-1.5 shadow-sm cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-red-500" />
-            <span>Export Report</span>
+            Export Report
           </Button>
 
           {/* Connect Account Button */}
           <Button
             onClick={() => handleConnectClick('track')}
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+            className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white text-xs font-semibold px-5 py-2.5 shadow-md shadow-red-600/25 transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Connect / Track Channel</span>
+            <Plus className="w-4 h-4" />
+            Connect / Track Channel
           </Button>
         </div>
       </div>
 
       {/* Active Channel Details Pill (if a single channel is selected) */}
       {activeChannel && (
-        <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-3xl bg-slate-100/80 dark:bg-white/5 border border-red-500/20 shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-3.5">
             {activeChannel.thumbnailUrl ? (
               <img
                 src={activeChannel.thumbnailUrl}
                 alt={activeChannel.title}
-                className="w-12 h-12 rounded-full border border-slate-200 dark:border-slate-700 object-cover shadow-xs"
+                className="w-12 h-12 rounded-full border-2 border-red-500/40 object-cover shadow-sm"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-bold flex items-center justify-center border border-red-200 dark:border-red-900/40">
+              <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-400 font-bold flex items-center justify-center">
                 YT
               </div>
             )}
@@ -738,27 +691,27 @@ function YouTubeDashboardContent() {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">{activeChannel.title}</h2>
                 {activeChannel.customUrl && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  <span className="text-xs text-slate-500 dark:text-gray-400 font-medium">
                     {activeChannel.customUrl}
                   </span>
                 )}
                 {isChannelOAuth(activeChannel) ? (
-                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
+                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                     Google OAuth (Studio Verified)
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                     <Key className="w-3.5 h-3.5 text-amber-500" />
                     Public Identifier (Public Stats Only)
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   Active
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
                 Channel ID: <code className="text-slate-700 dark:text-slate-300 font-mono text-[11px]">{activeChannel.channelId}</code>
                 {activeChannel.googleAccountEmail && (
                   <span className="ml-2 font-medium text-emerald-600 dark:text-emerald-400">
@@ -779,7 +732,7 @@ function YouTubeDashboardContent() {
               href={`https://www.youtube.com/channel/${activeChannel.channelId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="inline-flex items-center gap-1 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors"
             >
               Open on YouTube <ExternalLink className="w-3 h-3" />
             </a>
@@ -787,7 +740,7 @@ function YouTubeDashboardContent() {
               variant="ghost"
               size="sm"
               onClick={() => handleDisconnect(activeChannel.id, activeChannel.title)}
-              className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl px-3 cursor-pointer"
+              className="text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-full px-3"
             >
               <Trash2 className="w-3.5 h-3.5 mr-1" />
               Disconnect
@@ -798,21 +751,21 @@ function YouTubeDashboardContent() {
 
       {/* Channels Empty State */}
       {channels.length === 0 && !loading && (
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-8 sm:p-10 text-center shadow-xs">
-          <div className="max-w-md mx-auto space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto border border-red-200 dark:border-red-900/40">
-              <YoutubeIcon className="w-7 h-7" />
+        <Card className="glass border border-red-500/30 rounded-3xl p-8 text-center bg-gradient-to-b from-red-500/5 to-transparent">
+          <div className="max-w-lg mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto shadow-inner border border-red-500/20">
+              <YoutubeIcon className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No YouTube Channels Connected</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">No YouTube Channels Connected</h3>
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">
                 Track any channel by entering its @handle, URL, or Channel ID, or authorize your YouTube channel securely with Google OAuth 2.0.
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Button
                 onClick={() => handleConnectClick('track')}
-                className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold px-5 h-9 shadow-xs gap-2 text-xs cursor-pointer"
+                className="rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold px-6 py-2.5 shadow-lg shadow-red-600/30 gap-2 text-xs"
               >
                 <Search className="w-4 h-4" />
                 Track Channel by @Handle / URL
@@ -820,49 +773,51 @@ function YouTubeDashboardContent() {
               <Button
                 onClick={() => handleConnectClick('oauth')}
                 variant="outline"
-                className="rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold px-5 h-9 gap-2 text-xs cursor-pointer"
+                className="rounded-full border-red-500/30 text-slate-700 dark:text-gray-200 hover:bg-red-500/10 font-semibold px-6 py-2.5 gap-2 text-xs"
               >
                 <YoutubeIcon className="w-4 h-4 text-red-500" />
                 Sign in with Google OAuth
               </Button>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Connected YouTube Channels Overview (Shown when NO channel is selected) */}
       {!selectedChannelId && channels.length > 0 && (
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-red-500" />
-                Connected YouTube Channels Overview
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Select a channel below or from the dropdown above to view detailed telemetry & analytics
-              </p>
+        <Card className="glass border border-purple-200 dark:border-white/5 shadow-xl rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-red-500" />
+                  Connected YouTube Channels Overview
+                </CardTitle>
+                <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                  Select a channel below or from the dropdown above to view detailed telemetry & analytics
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-slate-600 dark:text-gray-300 bg-slate-100 dark:bg-white/5 px-3 py-1 rounded-full border border-purple-200 dark:border-white/10">
+                {channels.length} {channels.length === 1 ? 'Channel' : 'Channels'} Connected
+              </span>
             </div>
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
-              {channels.length} {channels.length === 1 ? 'Channel' : 'Channels'} Connected
-            </span>
-          </div>
-          <div className="p-6">
+          </CardHeader>
+          <CardContent className="p-6 pt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {channels.map((ch) => (
                 <div
                   key={ch.id}
-                  className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between gap-4 shadow-2xs"
+                  className="p-5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-purple-100 dark:border-white/10 hover:border-red-500/40 transition-all flex flex-col justify-between gap-4"
                 >
                   <div className="flex items-start gap-3.5">
                     {ch.thumbnailUrl ? (
                       <img
                         src={ch.thumbnailUrl}
                         alt={ch.title}
-                        className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                        className="w-12 h-12 rounded-full object-cover border border-red-500/30 shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-bold flex items-center justify-center shrink-0 border border-red-200 dark:border-red-900/40">
+                      <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-500 font-bold flex items-center justify-center shrink-0">
                         YT
                       </div>
                     )}
@@ -870,17 +825,17 @@ function YouTubeDashboardContent() {
                       <h4 className="font-bold text-slate-900 dark:text-white truncate" title={ch.title}>
                         {ch.title}
                       </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-xs text-slate-500 dark:text-gray-400 truncate">
                         {ch.customUrl || ch.googleAccountEmail || ch.channelId}
                       </p>
                       <div className="mt-1">
                         {isChannelOAuth(ch) ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             <ShieldCheck className="w-2.5 h-2.5" />
                             Google OAuth
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                             <Key className="w-2.5 h-2.5" />
                             Public Identifier
                           </span>
@@ -889,23 +844,23 @@ function YouTubeDashboardContent() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-center text-xs py-2 px-3 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800/80">
+                  <div className="grid grid-cols-2 gap-3 text-center text-xs py-2 px-3 rounded-xl bg-slate-100/70 dark:bg-black/20 border border-slate-200/50 dark:border-white/5">
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Subscribers</span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-400 block">Subscribers</span>
                       <span className="font-bold text-slate-900 dark:text-white">
                         {Number(ch.subscribers || 0).toLocaleString()}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Videos</span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-400 block">Videos</span>
                       <span className="font-bold text-slate-900 dark:text-white">
                         {ch.totalVideos || 0}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-800 text-xs">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-white/10 text-xs">
+                    <span className="text-[11px] text-slate-500 dark:text-gray-400">
                       {ch.lastSyncedAt
                         ? `Synced ${new Date(ch.lastSyncedAt).toLocaleDateString()}`
                         : 'Not synced yet'}
@@ -914,15 +869,10 @@ function YouTubeDashboardContent() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        const val = String(ch.id);
-                        setSelectedChannelId(val);
+                        setSelectedChannelId(String(ch.id));
                         setVideoPage(1);
-                        const params = new URLSearchParams(searchParams.toString());
-                        params.set('channelId', val);
-                        const query = params.toString();
-                        router.push(query ? `/dashboard/youtube?${query}` : '/dashboard/youtube', { scroll: false });
                       }}
-                      className="rounded-xl text-xs font-semibold h-8 px-3.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
+                      className="rounded-full text-xs font-semibold h-8 px-3.5 hover:border-red-500 hover:text-red-500 cursor-pointer"
                     >
                       Select Channel →
                     </Button>
@@ -930,15 +880,15 @@ function YouTubeDashboardContent() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Single Channel Detailed Telemetry & Analytics */}
       {Boolean(selectedChannelId) && (
         <div className="space-y-6">
           {/* Overview Cards Grid (8 KPI cards including all YouTube Studio metrics) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
         {[
           {
             label: 'Subscribers',
@@ -947,8 +897,8 @@ function YouTubeDashboardContent() {
               ? `${overview?.netSubscribers >= 0 ? '+' : ''}${(overview?.netSubscribers || 0).toLocaleString()} net in period`
               : `Total public subscribers`,
             icon: Users,
-            iconClass: 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400',
-            dotClass: 'bg-red-500',
+            color: 'text-red-500',
+            bg: 'from-red-500/20 to-pink-500/20',
             live: true,
             locked: false,
           },
@@ -959,8 +909,8 @@ function YouTubeDashboardContent() {
               ? `${Number(overview.periodViews).toLocaleString()} in ${dateRange}`
               : 'Cumulative channel views',
             icon: Eye,
-            iconClass: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400',
-            dotClass: 'bg-indigo-500',
+            color: 'text-indigo-500',
+            bg: 'from-indigo-500/20 to-purple-500/20',
             live: true,
             locked: false,
           },
@@ -969,8 +919,8 @@ function YouTubeDashboardContent() {
             value: (overview?.totalVideos || 0).toLocaleString(),
             sub: `${videos.length} videos cataloged`,
             icon: Video,
-            iconClass: 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400',
-            dotClass: 'bg-purple-500',
+            color: 'text-purple-500',
+            bg: 'from-purple-500/20 to-pink-500/20',
             live: false,
             locked: false,
           },
@@ -983,8 +933,8 @@ function YouTubeDashboardContent() {
               ? `${Number(overview?.watchTimeMinutes ?? 0).toLocaleString()} mins watched (${dateRange})`
               : 'Requires Google OAuth login',
             icon: hasAnalyticsAccess ? Clock : Lock,
-            iconClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400',
-            dotClass: 'bg-amber-500',
+            color: hasAnalyticsAccess ? 'text-amber-500' : 'text-amber-600 dark:text-amber-400',
+            bg: hasAnalyticsAccess ? 'from-amber-500/20 to-orange-500/20' : 'from-amber-500/10 to-orange-500/10',
             live: false,
             locked: !hasAnalyticsAccess,
           },
@@ -999,8 +949,8 @@ function YouTubeDashboardContent() {
               ? `Studio audience retention (${dateRange})`
               : 'Requires Google OAuth login',
             icon: hasAnalyticsAccess ? Sparkles : Lock,
-            iconClass: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400',
-            dotClass: 'bg-cyan-500',
+            color: hasAnalyticsAccess ? 'text-cyan-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-cyan-500/20 to-blue-500/20' : 'from-slate-500/10 to-slate-500/10',
             live: false,
             locked: !hasAnalyticsAccess,
           },
@@ -1011,8 +961,8 @@ function YouTubeDashboardContent() {
               : 'Cannot Access',
             sub: hasAnalyticsAccess ? `Studio growth (${dateRange})` : 'Daily churn requires Google OAuth',
             icon: hasAnalyticsAccess ? TrendingUp : Lock,
-            iconClass: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400',
-            dotClass: 'bg-emerald-500',
+            color: hasAnalyticsAccess ? 'text-emerald-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-emerald-500/20 to-green-500/20' : 'from-slate-500/10 to-slate-500/10',
             live: hasAnalyticsAccess,
             locked: !hasAnalyticsAccess,
           },
@@ -1023,8 +973,8 @@ function YouTubeDashboardContent() {
               : 'Cannot Access',
             sub: hasAnalyticsAccess ? `Unsubscribes (${dateRange})` : 'Unsubscribes require Google OAuth',
             icon: hasAnalyticsAccess ? TrendingDown : Lock,
-            iconClass: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400',
-            dotClass: 'bg-rose-500',
+            color: hasAnalyticsAccess ? 'text-rose-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-rose-500/20 to-red-500/20' : 'from-slate-500/10 to-slate-500/10',
             live: false,
             locked: !hasAnalyticsAccess,
           },
@@ -1035,63 +985,80 @@ function YouTubeDashboardContent() {
               : 'Cannot Access',
             sub: hasAnalyticsAccess ? `Official Studio shares (${dateRange})` : 'Share tracking requires Google OAuth',
             icon: hasAnalyticsAccess ? Share2 : Lock,
-            iconClass: 'bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400',
-            dotClass: 'bg-pink-500',
+            color: hasAnalyticsAccess ? 'text-pink-500' : 'text-slate-400',
+            bg: hasAnalyticsAccess ? 'from-pink-500/20 to-rose-500/20' : 'from-slate-500/10 to-slate-500/10',
             live: false,
             locked: !hasAnalyticsAccess,
           },
         ].map((card, i) => (
-          <div
+          <Card
             key={i}
-            className={`rounded-2xl p-5 shadow-xs transition-all hover:scale-[1.01] border ${
+            className={`rounded-2xl p-5 shadow-sm card-interactive transition-all border ${
               card.locked
                 ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'
-                : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800'
+                : 'bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-800'
             }`}
           >
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-xs font-semibold uppercase tracking-wider">{card.label}</span>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${card.iconClass}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{card.label}</span>
+                {card.live && (
+                  <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    LIVE
+                  </span>
+                )}
+                {card.locked && (
+                  <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                    <Lock className="w-2.5 h-2.5" />
+                    STUDIO ONLY
+                  </span>
+                )}
+              </div>
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${card.bg} flex items-center justify-center ${card.color} shadow-xs`}>
                 <card.icon className="w-4 h-4" />
               </div>
             </div>
-            <div className={`text-2xl font-bold mt-3 ${card.locked ? 'text-amber-700 dark:text-amber-400 text-sm flex items-center gap-1.5 py-1' : 'text-slate-900 dark:text-white'}`}>
+            <div className={`text-2xl font-bold tracking-tight ${card.locked ? 'text-amber-700 dark:text-amber-400 text-sm flex items-center gap-1.5 py-1' : 'text-slate-900 dark:text-white'}`}>
               {card.locked && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
               {card.value}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
-              <span className={`w-1.5 h-1.5 rounded-full ${card.dotClass} ${card.live ? 'animate-pulse' : ''}`} />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">
               {card.sub}
             </p>
-          </div>
+          </Card>
         ))}
       </div>
+
+
 
       {/* Interactive Charts Section - ONLY rendered for Google OAuth connected channels with YouTube Studio Analytics access */}
       {hasAnalyticsAccess && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Views & Watch Time Trend */}
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-indigo-500" />
-                  Views & Watch Time Trend
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Daily viewer traffic and watch time hours ({dateRange})
-                </p>
+          <Card className="glass border border-purple-200 dark:border-white/5 shadow-xl rounded-3xl overflow-hidden">
+            <CardHeader className="p-6 pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-indigo-500" />
+                    Views & Watch Time Trend
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                    Daily viewer traffic and watch time hours ({dateRange})
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    Live Daily
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                  Live Daily
-                </span>
-              </div>
-            </div>
-            <div className="p-6 pt-4 h-80">
+            </CardHeader>
+            <CardContent className="p-6 pt-2 h-80">
               {timeseries.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 text-xs">
+                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-gray-400 text-xs">
                   <Calendar className="w-8 h-8 text-slate-400 mb-2 opacity-60" />
                   No daily time-series data recorded for this range yet.
                 </div>
@@ -1108,9 +1075,9 @@ function YouTubeDashboardContent() {
                         <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.25} vertical={false} />
-                    <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
+                    <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
+                    <YAxis stroke="#6b7280" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     <Area type="monotone" dataKey="views" name="Views" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorViewsYt)" />
@@ -1118,79 +1085,83 @@ function YouTubeDashboardContent() {
                   </AreaChart>
                 </ResponsiveContainer>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Subscriber Growth (Gained vs Lost) */}
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
-                  Subscriber Growth
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Subscribers gained vs lost per day ({dateRange})
-                </p>
+          <Card className="glass border border-purple-200 dark:border-white/5 shadow-xl rounded-3xl overflow-hidden">
+            <CardHeader className="p-6 pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    Subscriber Growth
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                    Subscribers gained vs lost per day ({dateRange})
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Real-Time Live
+                </span>
               </div>
-              <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Real-Time Live
-              </span>
-            </div>
-            <div className="p-6 pt-4 h-80">
+            </CardHeader>
+            <CardContent className="p-6 pt-2 h-80">
               {timeseries.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 text-xs">
+                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-gray-400 text-xs">
                   <Users className="w-8 h-8 text-slate-400 mb-2 opacity-60" />
                   No subscriber growth data recorded for this range yet.
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={timeseries} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.25} vertical={false} />
-                    <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
+                    <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
+                    <YAxis stroke="#6b7280" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Bar dataKey="subscribersGained" name="Subscribers Gained" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="subscribersLost" name="Subscribers Lost" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="subscribersGained" name="Subscribers Gained" fill="#10b981" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="subscribersLost" name="Subscribers Lost" fill="#f43f5e" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Engagement Over Time (Likes, Comments, Shares) */}
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden lg:col-span-2">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <ThumbsUp className="w-4 h-4 text-pink-500" />
-                  Audience Engagement Over Time
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tracking likes, comments, and shares across video uploads ({dateRange})
-                </p>
+          <Card className="glass border border-purple-200 dark:border-white/5 shadow-xl rounded-3xl overflow-hidden lg:col-span-2">
+            <CardHeader className="p-6 pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <ThumbsUp className="w-4 h-4 text-pink-500" />
+                    Audience Engagement Over Time
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                    Tracking likes, comments, and shares across video uploads ({dateRange})
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse"></span>
+                    Live Telemetry
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-pink-50 text-pink-700 dark:bg-pink-950/70 dark:text-pink-400 border border-pink-200 dark:border-pink-800/60 shadow-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse"></span>
-                  Live Telemetry
-                </span>
-              </div>
-            </div>
-            <div className="p-6 pt-4 h-72">
+            </CardHeader>
+            <CardContent className="p-6 pt-2 h-72">
               {timeseries.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 text-xs">
+                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-gray-400 text-xs">
                   <Share2 className="w-8 h-8 text-slate-400 mb-2 opacity-60" />
                   No engagement records found for this range yet.
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={timeseries} margin={{ top: 10, right: 30, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.25} vertical={false} />
-                    <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
+                    <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
+                    <YAxis stroke="#6b7280" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     <Line type="monotone" dataKey="likes" name="Likes" stroke="#ec4899" strokeWidth={2.5} dot={false} />
@@ -1199,82 +1170,84 @@ function YouTubeDashboardContent() {
                   </LineChart>
                 </ResponsiveContainer>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Videos Section */}
-      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Video className="w-4 h-4 text-red-600" />
-              Channel Video Explorer
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Showing {videos.length} of {videoTotal} video uploads
-            </p>
-          </div>
-
-          {/* Video Controls: Search, Sort */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Input
-                type="text"
-                placeholder="Search videos..."
-                value={videoSearch}
-                onChange={(e) => {
-                  setVideoSearch(e.target.value);
-                  setVideoPage(1);
-                }}
-                className="rounded-xl pl-9 pr-4 py-1.5 text-xs h-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white w-48 sm:w-60 focus-visible:ring-red-500 shadow-xs"
-              />
+      <Card className="glass border border-purple-200 dark:border-white/5 shadow-xl rounded-3xl overflow-hidden">
+        <CardHeader className="p-6 pb-4 border-b border-purple-100 dark:border-white/5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Video className="w-5 h-5 text-red-500" />
+                Channel Video Explorer
+              </CardTitle>
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                Showing {videos.length} of {videoTotal} video uploads
+              </p>
             </div>
 
-            <div className="relative">
-              <select
-                value={videoSort}
-                onChange={(e) => {
-                  setVideoSort(e.target.value);
-                  setVideoPage(1);
-                }}
-                className="rounded-xl px-3.5 py-1.5 text-xs h-9 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-medium appearance-none pr-8 cursor-pointer shadow-xs"
+            {/* Video Controls: Search, Sort */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Search videos..."
+                  value={videoSearch}
+                  onChange={(e) => {
+                    setVideoSearch(e.target.value);
+                    setVideoPage(1);
+                  }}
+                  className="rounded-full pl-9 pr-4 py-1.5 text-xs h-9 bg-slate-100 dark:bg-white/5 border-purple-200 dark:border-white/10 w-48 sm:w-60 focus-visible:ring-red-500"
+                />
+              </div>
+
+              <div className="relative">
+                <select
+                  value={videoSort}
+                  onChange={(e) => {
+                    setVideoSort(e.target.value);
+                    setVideoPage(1);
+                  }}
+                  className="rounded-full px-3.5 py-1.5 text-xs h-9 bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-white/10 text-slate-900 dark:text-white font-medium appearance-none pr-8 cursor-pointer"
+                >
+                  <option value="publishedAt" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Latest Published</option>
+                  <option value="views" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Viewed</option>
+                  <option value="likes" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Liked</option>
+                  <option value="comments" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Comments</option>
+                </select>
+                <ArrowUpDown className="w-3 h-3 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setVideoOrder(videoOrder === 'ASC' ? 'DESC' : 'ASC')}
+                className="h-9 px-3 rounded-full text-xs font-semibold"
+                title={`Sort ${videoOrder === 'ASC' ? 'Descending' : 'Ascending'}`}
               >
-                <option value="publishedAt" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Latest Published</option>
-                <option value="views" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Viewed</option>
-                <option value="likes" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Liked</option>
-                <option value="comments" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Most Comments</option>
-              </select>
-              <ArrowUpDown className="w-3 h-3 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                {videoOrder === 'ASC' ? '▲ Asc' : '▼ Desc'}
+              </Button>
             </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setVideoOrder(videoOrder === 'ASC' ? 'DESC' : 'ASC')}
-              className="h-9 px-3 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shadow-xs"
-              title={`Sort ${videoOrder === 'ASC' ? 'Descending' : 'Ascending'}`}
-            >
-              {videoOrder === 'ASC' ? '▲ Asc' : '▼ Desc'}
-            </Button>
           </div>
-        </div>
+        </CardHeader>
 
-        <div className="p-0">
+        <CardContent className="p-0">
           <div className="overflow-x-auto relative">
             {videosLoading && (
               <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none">
-                <div className="bg-slate-900/90 text-slate-100 text-xs px-3.5 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2 shadow-lg">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-red-500" />
+                <div className="bg-slate-900/90 text-cyan-400 text-xs px-3.5 py-1.5 rounded-full border border-cyan-500/30 flex items-center gap-2 shadow-lg">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   Updating videos...
                 </div>
               </div>
             )}
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-50/70 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs uppercase tracking-wider">
+                <tr className="bg-slate-100 dark:bg-black/30 border-b border-slate-200 dark:border-white/10 text-slate-700 dark:text-cyan-300 font-bold text-xs uppercase tracking-wider">
                   <th className="py-3.5 px-6 whitespace-nowrap">Video</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">Channel</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">Duration</th>
@@ -1285,10 +1258,10 @@ function YouTubeDashboardContent() {
                   <th className="py-3.5 px-6 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y divide-slate-100 dark:divide-slate-800/60 text-xs transition-opacity duration-150 ${videosLoading ? 'opacity-50' : 'opacity-100'}`}>
+              <tbody className={`divide-y divide-slate-100 dark:divide-white/5 text-xs transition-opacity duration-150 ${videosLoading ? 'opacity-50' : 'opacity-100'}`}>
                 {videos.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-slate-500 dark:text-gray-400">
                       {channels.length === 0
                         ? 'Connect a YouTube channel to view and manage uploaded videos.'
                         : 'No videos match the current search filter.'}
@@ -1296,15 +1269,15 @@ function YouTubeDashboardContent() {
                   </tr>
                 ) : (
                   videos.map((vid) => (
-                    <tr key={vid.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <tr key={vid.id} className="hover:bg-cyan-500/5 transition-colors">
                       {/* Video Title & Thumbnail */}
                       <td className="py-3 px-6 max-w-sm">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-20 h-12 rounded-lg overflow-hidden bg-black shrink-0 border border-slate-200 dark:border-slate-800 group cursor-pointer" onClick={() => setSelectedVideo(vid)}>
+                          <div className="relative w-20 h-12 rounded-xl overflow-hidden bg-black shrink-0 border border-slate-200 dark:border-white/10 group cursor-pointer" onClick={() => setSelectedVideo(vid)}>
                             {vid.thumbnailUrl ? (
                               <img src={vid.thumbnailUrl} alt={vid.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-red-600/10 text-red-600">
+                              <div className="w-full h-full flex items-center justify-center bg-red-600/20 text-red-500">
                                 <Video className="w-5 h-5" />
                               </div>
                             )}
@@ -1312,7 +1285,7 @@ function YouTubeDashboardContent() {
                           <div className="min-w-0">
                             <button
                               onClick={() => setSelectedVideo(vid)}
-                              className="font-semibold text-slate-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors text-left line-clamp-2 cursor-pointer"
+                              className="font-bold text-slate-900 dark:text-white hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors text-left line-clamp-2 cursor-pointer"
                               title={vid.title}
                             >
                               {vid.title}
@@ -1323,7 +1296,7 @@ function YouTubeDashboardContent() {
 
                       {/* Channel */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-gray-300">
                           {vid.channel?.thumbnailUrl && (
                             <img src={vid.channel.thumbnailUrl} alt="" className="w-4 h-4 rounded-full object-cover" />
                           )}
@@ -1332,27 +1305,27 @@ function YouTubeDashboardContent() {
                       </td>
 
                       {/* Duration */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap font-mono text-slate-600 dark:text-slate-400">
+                      <td className="py-3 px-4 text-center whitespace-nowrap font-mono text-slate-600 dark:text-gray-300">
                         {vid.duration}
                       </td>
 
                       {/* Views */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                      <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-cyan-600 dark:text-cyan-400">
                         {(vid.views || 0).toLocaleString()}
                       </td>
 
                       {/* Likes */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                      <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-pink-600 dark:text-pink-400">
                         {(vid.likes || 0).toLocaleString()}
                       </td>
 
                       {/* Comments */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                      <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-emerald-600 dark:text-emerald-400">
                         {(vid.comments || 0).toLocaleString()}
                       </td>
 
                       {/* Published */}
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400 font-medium">
+                      <td className="py-3 px-4 whitespace-nowrap text-slate-500 dark:text-gray-400 font-medium">
                         {new Date(vid.publishedAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -1365,9 +1338,9 @@ function YouTubeDashboardContent() {
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => setSelectedVideo(vid)}
-                            className="text-xs h-7 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium cursor-pointer shadow-xs"
+                            className="text-xs h-7 px-3 rounded-full hover:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-semibold cursor-pointer"
                           >
                             Details
                           </Button>
@@ -1375,7 +1348,7 @@ function YouTubeDashboardContent() {
                             href={`https://www.youtube.com/watch?v=${vid.videoId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 px-2.5 py-1 rounded-lg border border-red-200/50 dark:border-red-900/40 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
                           >
                             Watch <ExternalLink className="w-3 h-3" />
                           </a>
@@ -1390,7 +1363,7 @@ function YouTubeDashboardContent() {
 
           {/* Fast Pagination Controls */}
           {videoTotalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 select-none">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-white/10 text-xs text-slate-500 dark:text-gray-400 select-none">
               <div>
                 Page <strong>{videoPage}</strong> of <strong>{videoTotalPages}</strong> ({videoTotal} total videos)
               </div>
@@ -1400,7 +1373,7 @@ function YouTubeDashboardContent() {
                   variant="outline"
                   disabled={videoPage <= 1 || videosLoading}
                   onClick={() => setVideoPage((p) => Math.max(1, p - 1))}
-                  className="rounded-xl h-8 px-3 text-xs font-semibold border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shadow-xs"
+                  className="rounded-full h-8 px-3.5 text-xs font-bold border-slate-200 dark:border-white/10 hover:bg-cyan-500/10 hover:text-cyan-400 cursor-pointer transition-all"
                 >
                   <ChevronLeft className="w-3.5 h-3.5 mr-1" />
                   Previous
@@ -1410,7 +1383,7 @@ function YouTubeDashboardContent() {
                   variant="outline"
                   disabled={videoPage >= videoTotalPages || videosLoading}
                   onClick={() => setVideoPage((p) => Math.min(videoTotalPages, p + 1))}
-                  className="rounded-xl h-8 px-3 text-xs font-semibold border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shadow-xs"
+                  className="rounded-full h-8 px-3.5 text-xs font-bold border-slate-200 dark:border-white/10 hover:bg-cyan-500/10 hover:text-cyan-400 cursor-pointer transition-all"
                 >
                   Next
                   <ChevronRight className="w-3.5 h-3.5 ml-1" />
@@ -1418,27 +1391,27 @@ function YouTubeDashboardContent() {
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
         </div>
       )}
 
-      {/* Video Details Modal - Standard Dialog Layout */}
+      {/* Video Details Modal - High-Tech Widescreen Layout */}
       <Dialog open={selectedVideo !== null} onOpenChange={(open) => !open && setSelectedVideo(null)}>
-        <DialogContent className="max-w-4xl sm:max-w-4xl lg:max-w-5xl bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-2xl overflow-hidden">
+        <DialogContent className="max-w-4xl sm:max-w-4xl lg:max-w-5xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
           {selectedVideo && (
             <div className="space-y-6">
               {/* Header Bar */}
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-sm border border-red-200 dark:border-red-900/50">
+                  <div className="w-10 h-10 rounded-2xl bg-red-600/10 text-red-500 flex items-center justify-center font-bold text-sm border border-red-500/20">
                     <YoutubeIcon className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
                       Video Intelligence & Breakdown
                     </span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-gray-400">
                       Channel: <strong className="text-slate-900 dark:text-white">{selectedVideo.channel?.title || 'YouTube Channel'}</strong> • Published {new Date(selectedVideo.publishedAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -1449,7 +1422,7 @@ function YouTubeDashboardContent() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left Col: Large HD Thumbnail Preview + 3 Stat Tiles + CTA */}
                 <div className="lg:col-span-5 space-y-4">
-                  <div className="relative rounded-xl overflow-hidden bg-black aspect-video border border-slate-200 dark:border-slate-800 shadow-xs group">
+                  <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-slate-200 dark:border-slate-800 shadow-xl group">
                     {selectedVideo.thumbnailUrl && (
                       <img src={selectedVideo.thumbnailUrl} alt={selectedVideo.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     )}
@@ -1461,21 +1434,21 @@ function YouTubeDashboardContent() {
 
                   {/* 3 Metric Tiles Grid */}
                   <div className="grid grid-cols-3 gap-2.5">
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-0.5">Views</span>
-                      <span className="font-bold text-base text-slate-900 dark:text-white">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800 text-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Views</span>
+                      <span className="font-black text-base text-cyan-600 dark:text-cyan-400">
                         {(selectedVideo.views || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-0.5">Likes</span>
-                      <span className="font-bold text-base text-slate-900 dark:text-white">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800 text-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Likes</span>
+                      <span className="font-black text-base text-pink-500 dark:text-pink-400">
                         {(selectedVideo.likes || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-0.5">Comments</span>
-                      <span className="font-bold text-base text-slate-900 dark:text-white">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800 text-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Comments</span>
+                      <span className="font-black text-base text-emerald-500 dark:text-emerald-400">
                         {(selectedVideo.comments || 0).toLocaleString()}
                       </span>
                     </div>
@@ -1486,7 +1459,7 @@ function YouTubeDashboardContent() {
                     href={`https://www.youtube.com/watch?v=${selectedVideo.videoId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-2 text-xs font-bold bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white px-5 py-3 rounded-2xl transition-all shadow-lg shadow-red-600/25 hover:shadow-red-600/40 cursor-pointer"
                   >
                     <YoutubeIcon className="w-4 h-4" /> Watch on YouTube <ExternalLink className="w-3.5 h-3.5" />
                   </a>
@@ -1495,16 +1468,16 @@ function YouTubeDashboardContent() {
                 {/* Right Col: Video Title & Spacious Formatted Description */}
                 <div className="lg:col-span-7 flex flex-col space-y-4">
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                    <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug">
                       {selectedVideo.title}
                     </h3>
                   </div>
 
                   <div className="flex-1 space-y-2">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                    <span className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider block">
                       Video Description & Metadata
                     </span>
-                    <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 max-h-[260px] overflow-y-auto whitespace-pre-wrap font-normal">
+                    <div className="text-xs leading-relaxed text-slate-700 dark:text-gray-300 p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-white/10 max-h-[300px] overflow-y-auto whitespace-pre-wrap custom-scrollbar font-normal">
                       {selectedVideo.description || 'No description provided for this video.'}
                     </div>
                   </div>
@@ -1513,7 +1486,7 @@ function YouTubeDashboardContent() {
                     <Button 
                       variant="outline" 
                       onClick={() => setSelectedVideo(null)} 
-                      className="rounded-xl px-5 h-9 text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shadow-xs"
+                      className="rounded-xl px-5 h-10 text-xs font-bold border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer"
                     >
                       Close Window
                     </Button>
@@ -1527,18 +1500,18 @@ function YouTubeDashboardContent() {
 
       {/* Connect Channel / Setup Modal */}
       <Dialog open={showConnectModal} onOpenChange={setShowConnectModal}>
-        <DialogContent className="max-w-2xl sm:max-w-2xl lg:max-w-3xl bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-2xl overflow-hidden">
+        <DialogContent className="max-w-2xl sm:max-w-2xl lg:max-w-3xl bg-white dark:bg-[#080d1a] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
           <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-200 dark:border-red-900/50 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20 shadow-inner shrink-0">
                   <YoutubeIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                     Connect YouTube Channel
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
                     Track any channel via official YouTube Data API v3 or connect your own channel via Google OAuth.
                   </p>
                 </div>
@@ -1546,14 +1519,14 @@ function YouTubeDashboardContent() {
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs font-semibold">
+            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-purple-100 dark:border-white/5 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setModalTab('track')}
-                className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                   modalTab === 'track'
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-md shadow-red-600/20'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Search className="w-3.5 h-3.5" />
@@ -1562,10 +1535,10 @@ function YouTubeDashboardContent() {
               <button
                 type="button"
                 onClick={() => setModalTab('oauth')}
-                className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                   modalTab === 'oauth'
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-md shadow-red-600/20'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <YoutubeIcon className="w-3.5 h-3.5" />
@@ -1577,7 +1550,7 @@ function YouTubeDashboardContent() {
             {modalTab === 'track' && (
               <div className="space-y-4 text-xs">
                 <div className="space-y-2">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 block">
+                  <label className="font-semibold text-slate-700 dark:text-gray-300 block">
                     YouTube Channel Identifier
                   </label>
                   <div className="flex gap-2">
@@ -1589,14 +1562,14 @@ function YouTubeDashboardContent() {
                           if (e.key === 'Enter') handleTrackChannel();
                         }}
                         placeholder="e.g. @mkbhd"
-                        className="rounded-xl pl-9 text-xs h-9 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                        className="rounded-2xl pl-9 text-xs h-11 border-purple-200 dark:border-white/10 bg-slate-50 dark:bg-white/5"
                       />
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     </div>
                     <Button
                       onClick={() => handleTrackChannel()}
                       disabled={trackingLoading || !trackIdentifier.trim()}
-                      className="rounded-xl px-5 h-9 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-xs gap-2 shrink-0 cursor-pointer"
+                      className="rounded-2xl px-6 h-11 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold text-xs shadow-md shadow-red-600/30 gap-2 shrink-0"
                     >
                       {trackingLoading ? (
                         <>
@@ -1615,7 +1588,7 @@ function YouTubeDashboardContent() {
 
                 {/* Quick Samples */}
                 <div className="pt-1">
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 block mb-1.5 font-medium">
+                  <span className="text-[11px] text-slate-400 dark:text-gray-500 block mb-1.5">
                     Quick test channels (click to track):
                   </span>
                   <div className="flex flex-wrap gap-2">
@@ -1627,7 +1600,7 @@ function YouTubeDashboardContent() {
                           setTrackIdentifier(sample);
                           handleTrackChannel(sample);
                         }}
-                        className="px-3 py-1 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-red-500/40 hover:text-red-600 dark:hover:text-red-400 transition-colors text-[11px] font-medium cursor-pointer"
+                        className="px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-purple-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-red-500/40 hover:text-red-500 transition-colors text-[11px] font-medium cursor-pointer"
                       >
                         {sample}
                       </button>
@@ -1636,7 +1609,7 @@ function YouTubeDashboardContent() {
                 </div>
 
                 {/* Tracking Info Notice */}
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-[11px] text-slate-600 dark:text-slate-300">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-purple-100 dark:border-white/10 flex items-center gap-2.5 text-[11px] text-slate-600 dark:text-gray-300">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                   <span>
                     Powered by official YouTube Data API v3. Enter any public channel @handle, URL, or Channel ID to pull genuine subscribers, lifetime views, and recent videos.
@@ -1650,47 +1623,47 @@ function YouTubeDashboardContent() {
               <div className="space-y-4 text-xs">
                 {oauthConfigured && oauthUrl ? (
                   <div className="space-y-4">
-                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">
                       Authenticate directly with your Google Account to authorize your own channel. This unlocks private <strong>YouTube Analytics API</strong> metrics including watch time hours, daily retention, and subscriber gains.
                     </p>
 
                     <Button
                       onClick={() => (window.location.href = oauthUrl)}
-                      className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold h-10 shadow-xs flex items-center justify-center gap-2 text-xs cursor-pointer"
+                      className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold py-3.5 shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 text-sm"
                     >
                       <YoutubeIcon className="w-4 h-4" />
                       Sign in with Google OAuth
                     </Button>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-purple-100 dark:border-white/10 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px]">
+                        <span className="font-semibold text-slate-700 dark:text-gray-300 text-[11px]">
                           Authorized Redirect URI:
                         </span>
                         <button
                           type="button"
                           onClick={handleCopyRedirectUri}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline"
                         >
                           {copiedRedirectUri ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                           {copiedRedirectUri ? 'Copied!' : 'Copy URI'}
                         </button>
                       </div>
-                      <code className="block p-2 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-800 dark:text-slate-200 break-all">
+                      <code className="block p-2 rounded-xl bg-slate-100 dark:bg-black/40 text-[11px] font-mono text-purple-600 dark:text-purple-400 break-all">
                         {config?.redirectUri || `${API_BASE_URL}/api/youtube/auth/callback`}
                       </code>
                     </div>
 
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                    <div className="text-[11px] text-slate-500 dark:text-gray-400 space-y-1">
                       <p>• Make sure this Redirect URI is added in your Google Cloud Console under <strong>Credentials → OAuth 2.0 Web Client</strong>.</p>
                       <p>• If your OAuth consent screen is in <strong>Testing</strong> mode, add your Google login email under <strong>Audience → Test users</strong> to prevent <code>Error 403: access_denied</code>.</p>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3.5">
-                    <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300 space-y-1.5">
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 space-y-1.5">
                       <div className="font-semibold flex items-center gap-1.5">
-                        <HelpCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        <HelpCircle className="w-4 h-4" />
                         Google Cloud OAuth Credentials Required
                       </div>
                       <p className="text-[11px] leading-relaxed opacity-90">
@@ -1698,7 +1671,7 @@ function YouTubeDashboardContent() {
                       </p>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 font-mono text-[11px] space-y-1 text-slate-800 dark:text-slate-300">
+                    <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 font-mono text-[11px] space-y-1 text-slate-800 dark:text-gray-300">
                       <div>GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com</div>
                       <div>GOOGLE_CLIENT_SECRET=your_client_secret</div>
                       <div>GOOGLE_REDIRECT_URI=http://localhost:3001/api/youtube/auth/callback</div>
@@ -1712,7 +1685,7 @@ function YouTubeDashboardContent() {
               <Button
                 variant="outline"
                 onClick={() => setShowConnectModal(false)}
-                className="rounded-xl text-xs px-5 h-9 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shadow-xs"
+                className="rounded-full text-xs px-5"
               >
                 Close
               </Button>

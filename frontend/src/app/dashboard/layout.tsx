@@ -9,15 +9,11 @@ import {
   LogOut, 
   User, 
   FileText,
-  BarChart3, 
-  ChevronRight, 
-  Menu, 
-  X, 
-  Shield, 
-  Home,
-  Radio,
-  UserPlus,
+  BarChart3,
   ArrowLeftRight,
+  Menu,
+  X,
+  Shield,
   Settings
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -60,7 +56,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.prefetch('/dashboard/profile');
     router.prefetch('/dashboard');
     router.prefetch('/dashboard/youtube');
-    router.prefetch('/dashboard/youtube/compare');
     router.prefetch('/dashboard/reports');
     router.prefetch('/dashboard/users');
     router.prefetch('/dashboard/users/add');
@@ -95,6 +90,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const activePath = optimisticPathname ?? pathname;
 
+  const navItems: Array<{ href: string; label: string; icon: any; active: boolean; badge?: string }> = [
+    {
+      href: '/dashboard/profile',
+      label: 'My Profile',
+      icon: User,
+      active: activePath === '/dashboard/profile',
+    },
+    {
+      href: '/dashboard',
+      label: 'LinkedIn Monitoring',
+      icon: LayoutDashboard,
+      active: activePath === '/dashboard',
+    },
+    {
+      href: '/dashboard/youtube',
+      label: 'YouTube Analytics',
+      icon: YoutubeIcon,
+      active: activePath === '/dashboard/youtube',
+    },
+    {
+      href: '/dashboard/youtube/compare',
+      label: 'YouTube Comparison',
+      icon: ArrowLeftRight,
+      active: activePath === '/dashboard/youtube/compare',
+    },
+    ...(userRole === 'super_admin' ? [
+      {
+        href: '/dashboard/users',
+        label: 'User Management',
+        icon: Users,
+        active: activePath.startsWith('/dashboard/users'),
+      },
+    ] : []),
+    {
+      href: '/dashboard/reports',
+      label: 'Reports & Export',
+      icon: FileText,
+      active: activePath === '/dashboard/reports',
+    },
+    {
+      href: '/dashboard/settings',
+      label: 'Account Settings',
+      icon: Settings,
+      active: activePath === '/dashboard/settings',
+    },
+  ];
+
   const prefetchRoute = (href: string) => {
     try {
       router.prefetch(href);
@@ -125,78 +167,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     router.replace('/');
   };
-
-  // Nav Items with Cyber-Clean Glassmorphism Styling
-  const navItems = [
-    {
-      href: '/dashboard/profile',
-      label: 'My Profile',
-      icon: User,
-      active: activePath === '/dashboard/profile',
-      activeBg: 'bg-indigo-600/15 text-indigo-600 dark:text-indigo-400 font-bold border-indigo-500 shadow-sm shadow-indigo-500/10',
-      iconBg: 'text-indigo-500',
-    },
-    {
-      href: '/dashboard',
-      label: 'LinkedIn Overview',
-      icon: LayoutDashboard,
-      active: activePath === '/dashboard' || (activePath.startsWith('/dashboard/') && !['/dashboard/youtube', '/dashboard/profile', '/dashboard/users', '/dashboard/reports', '/dashboard/settings', '/dashboard/company'].some(p => activePath.startsWith(p))),
-      activeBg: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 font-bold border-sky-500 shadow-sm shadow-sky-500/10',
-      iconBg: 'text-sky-500',
-    },
-    {
-      href: '/dashboard/youtube',
-      label: 'YouTube Analytics',
-      icon: YoutubeIcon,
-      active: activePath === '/dashboard/youtube',
-      badge: 'Live Stream',
-      activeBg: 'bg-red-500/15 text-red-600 dark:text-red-400 font-bold border-red-500 shadow-sm shadow-red-500/10',
-      iconBg: 'text-red-500',
-    },
-    {
-      href: '/dashboard/youtube/compare',
-      label: 'YouTube Comparison',
-      icon: ArrowLeftRight,
-      active: activePath === '/dashboard/youtube/compare',
-      badge: 'Compare',
-      activeBg: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold border-rose-500 shadow-sm shadow-rose-500/10',
-      iconBg: 'text-rose-500',
-    },
-    ...(userRole === 'super_admin' ? [
-      {
-        href: '/dashboard/users',
-        label: 'User Management',
-        icon: Users,
-        active: activePath === '/dashboard/users',
-        activeBg: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold border-purple-500',
-        iconBg: 'text-purple-500',
-      },
-      {
-        href: '/dashboard/users/add',
-        label: 'Add New User',
-        icon: UserPlus,
-        active: activePath === '/dashboard/users/add',
-        activeBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500',
-        iconBg: 'text-emerald-500',
-      },
-    ] : []),
-    {
-      href: '/dashboard/reports',
-      label: 'Reports & Export',
-      icon: FileText,
-      active: activePath === '/dashboard/reports',
-      activeBg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold border-amber-500',
-      iconBg: 'text-amber-500',
-    },
-    {
-      href: '/dashboard/settings',
-      label: 'Account Settings',
-      icon: Settings,
-      active: activePath === '/dashboard/settings',
-      activeBg: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 font-bold border-slate-500',
-      iconBg: 'text-slate-500',
-    },
-  ];
 
   const getPageTitle = () => {
     if (activePath === '/dashboard') return 'LinkedIn Monitoring';
@@ -231,7 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen text-slate-900 dark:text-slate-100 overflow-hidden select-none bg-slate-50 dark:bg-[#06080e] relative">
+    <div className="flex h-screen bg-slate-50 dark:bg-[#06080e] p-3 sm:p-4 md:p-6 gap-4 sm:gap-6 relative overflow-hidden select-none">
       {/* Background ambient lighting */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 dark:bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 dark:bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
@@ -244,45 +214,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-xs transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Main Glass Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 glass-panel flex flex-col transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+      {/* Main Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-[#0f172a] border-r border-slate-200 dark:border-slate-800/90 flex flex-col transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Brand Header */}
-        <div className="h-16 px-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
+        <div className="h-16 px-5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between">
           <Link 
-            href="/dashboard/profile" 
+            href="/dashboard/profile"
             prefetch={true} 
             onMouseEnter={() => prefetchRoute('/dashboard/profile')}
             onFocus={() => prefetchRoute('/dashboard/profile')}
             onClick={() => handleNavClick('/dashboard/profile')}
-            className="flex items-center gap-2.5 group"
+            className="flex items-center gap-3 group"
           >
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
-              <BarChart3 className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-base shadow-md shadow-cyan-500/25 group-hover:scale-105 transition-transform">
+              <BarChart3 className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">
+                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">
                   SocialPulse
                 </span>
-                <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 border border-indigo-500/30">
+                <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
                   PRO
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 dark:text-slate-400 block -mt-0.5 font-medium">
-                Telemetry Hub
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 block -mt-0.5 font-medium">
+                Monitoring Suite
               </span>
             </div>
           </Link>
           <button 
             type="button"
-            className="lg:hidden p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
             onClick={() => setMobileMenuOpen(false)}
           >
             <X className="w-4 h-4" />
@@ -291,8 +261,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation Items */}
         <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
-          <div className="px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-            Control Center
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Navigation
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -303,11 +273,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 prefetch={true}
                 onMouseEnter={() => prefetchRoute(item.href)}
                 onFocus={() => prefetchRoute(item.href)}
+                onPointerDown={() => prefetchRoute(item.href)}
+                onTouchStart={() => prefetchRoute(item.href)}
                 onClick={() => handleNavClick(item.href)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs sm:text-sm font-medium transition-all duration-150 cursor-pointer ${
+                className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                   item.active
-                    ? `${item.activeBg} border-l-4`
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border-l-4 border-transparent'
+                    ? 'bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-cyan-300 font-bold border-indigo-600 dark:border-cyan-400 border-l-2 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/90 hover:text-slate-900 dark:hover:text-cyan-300 border-l-2 border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -319,7 +291,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 border border-red-500/30 animate-pulse">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
                     {item.badge}
                   </span>
                 )}
@@ -329,13 +301,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3.5 border-t border-slate-200/80 dark:border-white/10 space-y-2.5">
-          <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-white/10">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80">
+            <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
               {userName.charAt(0) || 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+              <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                 {userName}
               </p>
               <div className="flex items-center gap-1 text-[10px] text-slate-400 capitalize truncate">
@@ -350,7 +322,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               type="button"
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
@@ -360,40 +332,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {/* Top Floating Glass Header */}
-        <header className="h-16 glass-panel border-b border-slate-200/80 dark:border-white/10 px-4 sm:px-6 flex items-center justify-between shrink-0 z-10">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
-              aria-label="Open navigation menu"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <Link href="/dashboard/profile" className="text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 hidden sm:flex items-center gap-1 font-medium">
-                <Home className="w-3.5 h-3.5" />
-                <span>SocialPulse</span>
-              </Link>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 hidden sm:inline" />
-              <h1 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
-                {getPageTitle()}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold shadow-xs">
-              <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
-              <span>Telemetry Active</span>
-            </div>
-          </div>
-        </header>
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative">
+        {/* Mobile Menu Button (Mobile Screens Only) */}
+        {!mobileMenuOpen && (
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shadow-md cursor-pointer"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Dynamic Page Scroll Area */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-[#090d16] custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>

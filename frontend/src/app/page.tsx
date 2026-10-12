@@ -16,11 +16,9 @@ import {
   BarChart3, 
   AlertCircle, 
   Loader2, 
-  ArrowRight, 
-  Shield,
-  Radio
+  ArrowRight,
+  Shield
 } from 'lucide-react';
-import { YoutubeIcon } from '@/components/icons/youtube-icon';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,24 +30,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [, startTransition] = useTransition();
 
-  // Do not auto-redirect on mount — always display login form first when starting the app
+  // Aggressively prefetch all dashboard routes on mount for sub-second login redirects
   useEffect(() => {
-    // Clear any previous/stale token so session authentication is always required on entry
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('admin_token');
-      sessionStorage.removeItem('user_role');
-      sessionStorage.removeItem('user_name');
-      sessionStorage.removeItem('user_email');
-      sessionStorage.removeItem('company_name');
-      sessionStorage.removeItem('company_role');
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('company_name');
-      localStorage.removeItem('company_role');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    if (token) {
+      router.push('/dashboard/profile');
     }
-
     router.prefetch('/dashboard/profile');
     router.prefetch('/dashboard');
     router.prefetch('/dashboard/youtube');
@@ -70,7 +56,6 @@ export default function LoginPage() {
     const cleanUsername = username.trim();
     if (!cleanUsername || !password) {
       setError('Please enter both your username and password.');
-      setLoading(false);
       return;
     }
 
@@ -86,29 +71,15 @@ export default function LoginPage() {
 
       if (res.ok) {
         const data = await res.json();
-        // Save session items synchronously to both sessionStorage and localStorage
-        const token = data.access_token;
-        const role = data.role;
-        const name = data.name || (role === 'super_admin' ? 'Super Admin' : 'Manager');
-        const companyName = data.companyName || 'System Enterprise';
-        const companyRole = data.companyRole || 'Administrator';
-        const email = data.email || cleanUsername;
+        // Save session items synchronously
+        localStorage.setItem('admin_token', data.access_token);
+        localStorage.setItem('user_role', data.role);
+        if (data.name) localStorage.setItem('user_name', data.name);
+        if (data.companyName) localStorage.setItem('company_name', data.companyName);
+        if (data.companyRole) localStorage.setItem('company_role', data.companyRole);
+        if (data.email) localStorage.setItem('user_email', data.email);
 
-        sessionStorage.setItem('admin_token', token);
-        sessionStorage.setItem('user_role', role);
-        sessionStorage.setItem('user_name', name);
-        sessionStorage.setItem('company_name', companyName);
-        sessionStorage.setItem('company_role', companyRole);
-        sessionStorage.setItem('user_email', email);
-
-        localStorage.setItem('admin_token', token);
-        localStorage.setItem('user_role', role);
-        localStorage.setItem('user_name', name);
-        localStorage.setItem('company_name', companyName);
-        localStorage.setItem('company_role', companyRole);
-        localStorage.setItem('user_email', email);
-
-        // Transition into dashboard upon successful authentication
+        // Instant optimistic transition using prefetched route
         startTransition(() => {
           router.push('/dashboard/profile');
         });
@@ -118,65 +89,50 @@ export default function LoginPage() {
         setLoading(false);
       }
     } catch {
-      setError('Unable to reach authentication server. Please verify the backend service is running on port 3001.');
+      setError('Unable to reach authentication server. Please ensure the backend service is active.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between text-slate-900 dark:text-slate-100 relative overflow-hidden transition-colors">
-      {/* Dynamic Background Ambient Blobs */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-indigo-600/15 via-blue-500/10 to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 right-10 w-[450px] h-[300px] bg-gradient-to-tl from-cyan-500/10 via-emerald-500/5 to-transparent blur-3xl pointer-events-none" />
-
+    <div className="min-h-screen w-full flex flex-col justify-between bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Top Header Navigation */}
-      <header className="w-full px-6 py-4 flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 glass-panel relative z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+      <header className="w-full px-6 py-4 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-[#0f172a]/70 backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs">
             <BarChart3 className="w-5 h-5" />
           </div>
-          <div>
-            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-              SocialPulse
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-blue-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
-                PRO 2.0
-              </span>
-            </span>
-          </div>
+          <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">
+            SocialPulse <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Analytics</span>
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shadow-xs">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span>Live Collector Engine</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>API Online</span>
           </div>
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Center Authentication Card */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6 relative z-10">
-        <div className="w-full max-w-[430px]">
-          {/* Main Card */}
-          <div className="glass-panel rounded-3xl p-7 sm:p-9 shadow-2xl relative overflow-hidden border border-slate-200/90 dark:border-white/10">
+      {/* Center Authentication Container */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-4">
+        <div className="w-full max-w-[420px]">
+          {/* Card */}
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm dark:shadow-2xl">
             {/* Header */}
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/30 mb-3">
-                <Radio className="w-6 h-6 animate-pulse" />
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Intelligence Command
+            <div className="mb-6">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Sign in to your account
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Enter your credentials to access social telemetry
+                Enter your credentials to manage social intelligence telemetry
               </p>
             </div>
 
-            {/* Role Switcher */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100/90 dark:bg-black/40 rounded-2xl mb-5 text-xs font-semibold border border-slate-200/80 dark:border-white/10">
+            {/* Role Tab Switcher */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mb-5 text-xs font-medium">
               <button
                 type="button"
                 onClick={() => {
@@ -184,10 +140,10 @@ export default function LoginPage() {
                   setError('');
                   prefetchDashboard();
                 }}
-                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   role === 'admin'
-                    ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-md'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white font-semibold shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
@@ -200,72 +156,52 @@ export default function LoginPage() {
                   setError('');
                   prefetchDashboard();
                 }}
-                className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   role === 'manager'
-                    ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-md'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white font-semibold shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <User className="w-3.5 h-3.5" />
-                <span>Manager</span>
+                <span>Account Manager</span>
               </button>
             </div>
 
-            {/* Error Banner */}
+            {/* Error Message */}
             {error && (
-              <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{error}</span>
-              </div>
-            )}
-
-            {/* Role-Specific Credentials Hint */}
-            {role === 'admin' ? (
-              <div className="mb-4 flex items-center justify-between text-[11px] bg-indigo-50/80 dark:bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 text-indigo-900 dark:text-indigo-300">
-                <span>Default credentials: <b>admin</b> / <b>admin123</b></span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername('admin');
-                    setPassword('admin123');
-                    setError('');
-                  }}
-                  className="font-bold text-indigo-600 dark:text-cyan-400 hover:underline cursor-pointer"
-                >
-                  Quick Fill
-                </button>
-              </div>
-            ) : (
-              <div className="mb-4 text-[11px] bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400">
-                Sign in with the email & temporary password provided by your Administrator.
               </div>
             )}
 
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="username" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {role === 'admin' ? 'Admin Username' : 'Manager Email or Username'}
+                <Label htmlFor="username" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Username or Email
                 </Label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <Input
                     id="username"
                     type="text"
-                    placeholder={role === 'admin' ? 'Enter your credentials' : 'youremail@gmail.com'}
+                    placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onFocus={prefetchDashboard}
-                    className="pl-10 h-10 bg-slate-50/80 dark:bg-black/50 border-slate-200 dark:border-white/10 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
+                    className="pl-10 h-10 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Password
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Password
+                  </Label>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <Input
@@ -275,13 +211,13 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={prefetchDashboard}
-                    className="pl-10 pr-10 h-10 bg-slate-50/80 dark:bg-black/50 border-slate-200 dark:border-white/10 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
+                    className="pl-10 pr-10 h-10 bg-slate-50 dark:bg-[#090d16] border-slate-200 dark:border-slate-700 text-xs focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                     tabIndex={-1}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
@@ -293,36 +229,34 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-gradient-to-r from-indigo-600 via-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs rounded-2xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer mt-3"
+                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Verifying session...</span>
+                    <span>Verifying credentials...</span>
                   </>
                 ) : (
                   <>
-                    <span>Enter Command Center</span>
+                    <span>Continue to Dashboard</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </Button>
             </form>
 
-            {/* Bottom Platform Badges */}
-            <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5 text-[11px] font-medium">
+            {/* Platform Badges */}
+            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5 text-[11px]">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Encrypted Telemetry</span>
+                <span>Encrypted Session</span>
               </span>
               <div className="flex items-center gap-2.5">
-                <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1">
-                  <span className="w-4 h-4 rounded bg-sky-500/20 text-sky-500 flex items-center justify-center font-bold text-[9px]">in</span>
+                <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                   LinkedIn
                 </span>
                 <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
-                  <YoutubeIcon className="w-3.5 h-3.5 text-red-500" />
+                <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
                   YouTube
                 </span>
               </div>
@@ -332,8 +266,8 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-4 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-white/10 relative z-10">
-        <span>SocialPulse Analytics &copy; {new Date().getFullYear()} • High-Speed Intelligence Platform</span>
+      <footer className="w-full py-4 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/40 dark:border-slate-800/40">
+        <span>Social Media Monitoring Tool &copy; {new Date().getFullYear()}</span>
       </footer>
     </div>
   );

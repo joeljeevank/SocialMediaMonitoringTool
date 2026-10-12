@@ -21,10 +21,9 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '@/lib/api-config';
-import { isHydrated, markHydrated } from '@/lib/data-cache';
 
 export default function AccountSettingsPage() {
-  // Synchronously initialize account details safely without SSR mismatch
+  // Account Information State
   const [name, setName] = useState('Administrator');
   const [email, setEmail] = useState('admin@example.com');
   const [companyName, setCompanyName] = useState('Enterprise Suite');
@@ -49,7 +48,6 @@ export default function AccountSettingsPage() {
   const [liveTelemetryAlerts, setLiveTelemetryAlerts] = useState(true);
 
   useEffect(() => {
-    markHydrated();
     setName(localStorage.getItem('user_name') || 'Administrator');
     setEmail(localStorage.getItem('user_email') || 'admin@example.com');
     setCompanyName(localStorage.getItem('company_name') || 'Enterprise Suite');
