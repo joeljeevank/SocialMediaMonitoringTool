@@ -83,13 +83,22 @@ export default function AccountSettingsPage() {
       setPasswordError('New passwords do not match.');
       return;
     }
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from your current password.');
+      return;
+    }
 
     setPasswordLoading(true);
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+      const userEmail = email || localStorage.getItem('user_email') || sessionStorage.getItem('user_email') || '';
+      const userRole = localStorage.getItem('user_role') || sessionStorage.getItem('user_role') || '';
+
       const res = await axios.post(`${API_BASE_URL}/auth/change-password`, {
         currentPassword,
-        newPassword
+        newPassword,
+        email: userEmail,
+        role: userRole
       }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
@@ -102,8 +111,15 @@ export default function AccountSettingsPage() {
         setTimeout(() => setPasswordSuccess(''), 4000);
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to change password. Check current password.';
-      setPasswordError(msg);
+      const resMsg = err.response?.data?.message;
+      let displayMsg = 'The current password you entered is incorrect. Please try again.';
+
+      if (Array.isArray(resMsg) && resMsg.length > 0) {
+        displayMsg = resMsg[0];
+      } else if (typeof resMsg === 'string' && resMsg !== 'Internal server error') {
+        displayMsg = resMsg;
+      }
+      setPasswordError(displayMsg);
     } finally {
       setPasswordLoading(false);
     }

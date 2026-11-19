@@ -68,7 +68,7 @@ export default function AddUserPage() {
           emailError: data.emailError,
         });
 
-        setManagerSuccess(`User ${managerName} registered successfully! Login credentials have been sent to ${data.email}.`);
+        setManagerSuccess(`User ${managerName} registered successfully! Login credentials have been sent to ${data.email}. (If not found in Primary Inbox, check Spam / Junk folder).`);
 
         setManagerName('');
         setManagerCompany('');
@@ -123,8 +123,12 @@ export default function AddUserPage() {
               <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
                 Generated Login Credentials
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                Credentials Generated ✓
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                createdCredentials.emailSent 
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+              }`}>
+                {createdCredentials.emailSent ? 'Email Dispatched ✓' : 'Email Notice (Check Below)'}
               </span>
             </div>
 
@@ -143,10 +147,15 @@ export default function AddUserPage() {
               </div>
             </div>
 
-            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Credentials dispatched to user. You can also copy them below as backup.
-              </p>
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-indigo-100/60 dark:border-indigo-900/40 pt-2.5">
+              <div className="space-y-0.5">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Credentials dispatched to <strong className="text-slate-700 dark:text-slate-300">{createdCredentials.email}</strong>.
+                </p>
+                <p className="text-[10.5px] text-amber-600 dark:text-amber-400 font-medium">
+                  💡 Note: If not seen in the Primary Inbox, please ask them to check their <strong>Spam / Junk</strong> folder and mark as "Not Spam".
+                </p>
+              </div>
               {createdCredentials.password && (
                 <button
                   type="button"

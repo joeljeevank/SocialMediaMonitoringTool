@@ -15,8 +15,8 @@ async function bootstrap() {
   console.log(`[Bootstrap] PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH}`);
   console.log(`[Bootstrap] SMTP EMAIL_USER configured: ${!!process.env.EMAIL_USER}`);
   console.log(`[Bootstrap] LINKEDIN_LI_AT_COOKIE configured: ${!!process.env.LINKEDIN_LI_AT_COOKIE}`);
+  console.log(`[Bootstrap] GEMINI_API_KEY configured: ${!!process.env.GEMINI_API_KEY}`);
 
   await app.listen(port, '0.0.0.0');
 }
 bootstrap();
-

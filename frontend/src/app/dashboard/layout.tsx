@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   Shield,
-  Settings
+  Settings,
+  Sparkles,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { YoutubeIcon } from '@/components/icons/youtube-icon';
@@ -56,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.prefetch('/dashboard/profile');
     router.prefetch('/dashboard');
     router.prefetch('/dashboard/youtube');
+    router.prefetch('/dashboard/analytics-ai');
     router.prefetch('/dashboard/reports');
     router.prefetch('/dashboard/users');
     router.prefetch('/dashboard/users/add');
@@ -114,6 +116,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: 'YouTube Comparison',
       icon: ArrowLeftRight,
       active: activePath === '/dashboard/youtube/compare',
+    },
+    {
+      href: '/dashboard/analytics-ai',
+      label: 'Ask Your Analytics AI',
+      icon: Sparkles,
+      active: activePath === '/dashboard/analytics-ai',
+      badge: 'AI',
     },
     ...(userRole === 'super_admin' ? [
       {

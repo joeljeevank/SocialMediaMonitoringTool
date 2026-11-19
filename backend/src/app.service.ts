@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { Account } from './account.entity';
@@ -79,9 +79,19 @@ export class AppService {
     email: string;
     role?: string;
   }) {
+    const cleanEmail = (data.email || '').trim().toLowerCase();
+    const cleanName = (data.name || '').trim();
+    const cleanCompany = (data.companyName || '').trim();
+    const cleanRole = data.role || 'manager';
+
+    if (!cleanEmail) {
+      const { BadRequestException } = require('@nestjs/common');
+      throw new BadRequestException('Please provide a valid email address.');
+    }
+
     // Check if user already exists
     const existingUser = await this.userRepo.findOne({
-      where: { email: data.email },
+      where: { email: cleanEmail },
     });
     if (existingUser) {
       const { BadRequestException } = require('@nestjs/common');
@@ -92,12 +102,12 @@ export class AppService {
     const generatedPassword = Math.random().toString(36).slice(-8);
 
     const newUser = this.userRepo.create({
-      name: data.name,
-      companyName: data.companyName,
-      companyRole: data.companyRole,
-      role: data.role || 'user',
-      phone: data.phone,
-      email: data.email,
+      name: cleanName,
+      companyName: cleanCompany,
+      companyRole: data.companyRole?.trim(),
+      role: cleanRole,
+      phone: data.phone?.trim(),
+      email: cleanEmail,
       password: generatedPassword,
     });
 
@@ -105,10 +115,10 @@ export class AppService {
 
     // Setup Nodemailer with resilient SMTP delivery
     const emailResult = await this.sendAccountEmail(
-      data.email,
-      data.name,
+      cleanEmail,
+      cleanName,
       generatedPassword,
-      data.role || 'manager',
+      cleanRole,
     );
 
     return {
@@ -131,6 +141,9 @@ export class AppService {
     const emailUser = process.env.EMAIL_USER?.trim();
     const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, '').trim();
 
+    const cleanTo = (toEmail || '').trim().toLowerCase();
+    const cleanName = (name || 'User').trim();
+
     if (!emailUser || !emailPass) {
       const msg = 'EMAIL_USER or EMAIL_PASS environment variable is not configured in backend/.env';
       console.warn(`[AppService.sendAccountEmail] ${msg}`);
@@ -140,7 +153,8 @@ export class AppService {
     const host = process.env.EMAIL_HOST?.trim();
     const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : undefined;
     const secure = process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE === 'true' : (port === 465);
-    const fromSender = process.env.EMAIL_FROM?.trim() || `"SocialPulse PRO" <${emailUser}>`;
+    const fromSender = process.env.EMAIL_FROM?.trim() || `"SocialPulse Workspace" <${emailUser}>`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     const htmlContent = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -149,14 +163,14 @@ export class AppService {
           <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Social Media Monitoring & Telemetry Suite</p>
         </div>
 
-        <p style="color: #1e293b; font-size: 14px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
-        <p style="color: #475569; font-size: 13px; line-height: 1.6;">Your <strong>${role}</strong> account for SocialPulse has been created. Use the credentials below to log into your workspace:</p>
+        <p style="color: #1e293b; font-size: 14px; line-height: 1.6;">Hello <strong>${cleanName}</strong>,</p>
+        <p style="color: #475569; font-size: 13px; line-height: 1.6;">You have been registered for a <strong>${role}</strong> account on SocialPulse PRO. You can sign in using the credentials below:</p>
 
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
             <tr>
               <td style="color: #64748b; padding: 6px 0; width: 140px; font-weight: 500;">Username / Email:</td>
-              <td style="color: #0f172a; padding: 6px 0; font-weight: 600; font-family: monospace;">${toEmail}</td>
+              <td style="color: #0f172a; padding: 6px 0; font-weight: 600; font-family: monospace;">${cleanTo}</td>
             </tr>
             <tr>
               <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Temporary Password:</td>
@@ -170,24 +184,32 @@ export class AppService {
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 13px; font-weight: 600; display: inline-block;">
+          <a href="${frontendUrl}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 13px; font-weight: 600; display: inline-block;">
             Sign In to Dashboard →
           </a>
         </div>
 
         <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
-          For security, please change your temporary password after your initial login.<br />
+          For security, please change your temporary password after logging in.<br />
           This is an automated system notification from SocialPulse.
+        </p>
+        <p style="color: #94a3b8; font-size: 11px; margin-top: 10px; line-height: 1.4;">
+          Tip: If this email was delivered to your Spam or Promotions folder, please mark it as "Not Spam" or move it to your Primary Inbox to ensure you receive future alerts.
         </p>
       </div>
     `;
 
     const mailOptions = {
       from: fromSender,
-      to: toEmail,
-      subject: 'Your SocialPulse Account Credentials',
-      text: `Hello ${name},\n\nYour ${role} account for SocialPulse has been created.\n\nUsername: ${toEmail}\nPassword: ${password}\n\nPlease sign in at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`,
+      to: cleanTo,
+      replyTo: emailUser,
+      subject: 'Welcome to SocialPulse PRO - Your Workspace Invitation',
+      text: `Hello ${cleanName},\n\nYour ${role} account for SocialPulse has been created.\n\nUsername: ${cleanTo}\nTemporary Password: ${password}\n\nPlease sign in at: ${frontendUrl}\n\n(Note: If this email landed in your Spam/Junk folder, please mark it as "Not Spam" to receive future notifications).`,
       html: htmlContent,
+      headers: {
+        'X-Mailer': 'SocialPulse PRO Mailer',
+        'X-Priority': '3',
+      },
     };
 
     // Candidate transport configurations to try in sequence
@@ -553,23 +575,48 @@ export class AppService {
   }
 
   async changePassword(body: any) {
-    const { email, currentPassword, newPassword } = body;
+    const { email, currentPassword, newPassword, role } = body || {};
 
-    if (email === 'admin') {
+    if (!currentPassword || typeof currentPassword !== 'string' || !currentPassword.trim()) {
+      throw new BadRequestException('Please enter your current password.');
+    }
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+      throw new BadRequestException('New password must be at least 6 characters long.');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('New password must be different from your current password.');
+    }
+
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const isAdmin =
+      cleanEmail === 'admin' ||
+      cleanEmail === 'admin@example.com' ||
+      role === 'super_admin' ||
+      !cleanEmail;
+
+    if (isAdmin) {
       const adminUser = await this.userRepo.findOne({
-        where: { email: 'admin' },
-      });
+        where: [
+          { email: 'admin' },
+          { email: 'admin@example.com' },
+          { role: 'super_admin' }
+        ],
+      }).catch(() => null);
+
       if (adminUser) {
         if (adminUser.password !== currentPassword) {
-          throw new UnauthorizedException('Invalid current password');
+          throw new BadRequestException('The current password you entered is incorrect. Please try again.');
         }
         adminUser.password = newPassword;
         await this.userRepo.save(adminUser);
-        return { success: true };
+        return { success: true, message: 'Password updated successfully' };
       } else {
+        // Bootstrap admin account check
         if (currentPassword === 'admin123') {
           const newAdmin = this.userRepo.create({
-            email: 'admin',
+            email: cleanEmail || 'admin@example.com',
             password: newPassword,
             role: 'super_admin',
             name: 'Super Admin',
@@ -577,25 +624,43 @@ export class AppService {
             phone: '0000000000',
           });
           await this.userRepo.save(newAdmin);
-          return { success: true };
+          return { success: true, message: 'Password updated successfully' };
         } else {
-          throw new UnauthorizedException('Invalid current password');
+          throw new BadRequestException('The current password you entered is incorrect. Please try again.');
         }
       }
     }
 
-    const user = await this.userRepo.findOne({ where: { email } });
+    // Lookup manager or general user
+    const user = await this.userRepo.findOne({
+      where: [
+        { email: ILike(cleanEmail) },
+        { name: ILike(cleanEmail) }
+      ],
+    }).catch(() => null);
+
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      // Check if it matches the fallback super admin account
+      const fallbackAdmin = await this.userRepo.findOne({
+        where: [{ role: 'super_admin' }, { email: 'admin' }, { email: 'admin@example.com' }]
+      }).catch(() => null);
+
+      if (fallbackAdmin && fallbackAdmin.password === currentPassword) {
+        fallbackAdmin.password = newPassword;
+        await this.userRepo.save(fallbackAdmin);
+        return { success: true, message: 'Password updated successfully' };
+      }
+
+      throw new BadRequestException('The current password you entered is incorrect. Please try again.');
     }
 
     if (user.password !== currentPassword) {
-      throw new UnauthorizedException('Invalid current password');
+      throw new BadRequestException('The current password you entered is incorrect. Please try again.');
     }
 
     user.password = newPassword;
     await this.userRepo.save(user);
 
-    return { success: true };
+    return { success: true, message: 'Password updated successfully' };
   }
 }

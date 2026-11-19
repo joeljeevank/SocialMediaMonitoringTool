@@ -32,6 +32,10 @@ obj/
 .linkedin-browser-profile*/
 *.html
 
+# Python
+__pycache__/
+*.pyc
+
 # OS
 Thumbs.db
 .DS_Store
