@@ -30,22 +30,23 @@ export class YoutubeController {
 
   @Get('auth/callback')
   async handleCallback(@Query('code') code: string, @Query('error') error: string, @Res() res: Response) {
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
     if (error) {
       let friendly = error;
       if (error === 'access_denied') {
         friendly = 'Google Error 403: access_denied. The app is in "Testing" mode. In Google Cloud Console -> OAuth consent screen, add your email under "Test users" or click "Publish App".';
       }
-      return res.redirect(`http://localhost:3000/dashboard/youtube?status=error&message=${encodeURIComponent(friendly)}`);
+      return res.redirect(`${frontendUrl}/dashboard/youtube?status=error&message=${encodeURIComponent(friendly)}`);
     }
 
     try {
       const channel = await this.youtubeService.handleAuthCallback(code);
       return res.redirect(
-        `http://localhost:3000/dashboard/youtube?status=connected&channelId=${channel.id}&title=${encodeURIComponent(channel.title)}`,
+        `${frontendUrl}/dashboard/youtube?status=connected&channelId=${channel.id}&title=${encodeURIComponent(channel.title)}`,
       );
     } catch (err: any) {
       return res.redirect(
-        `http://localhost:3000/dashboard/youtube?status=error&message=${encodeURIComponent(err.message || 'OAuth verification failed')}`,
+        `${frontendUrl}/dashboard/youtube?status=error&message=${encodeURIComponent(err.message || 'OAuth verification failed')}`,
       );
     }
   }

@@ -561,9 +561,10 @@ export class AppService {
         await this.analyticsRepo.save([initialAnalytics]);
       }
 
+      const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
       // Redirect back to dashboard
       return res.redirect(
-        `http://localhost:3000/dashboard?token=${accessToken}&status=success`,
+        `${frontendUrl}/dashboard?token=${accessToken}&status=success`,
       );
     } catch (error: any) {
       console.error(
