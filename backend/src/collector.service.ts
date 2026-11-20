@@ -595,12 +595,14 @@ export class CollectorService {
     this.cleanStaleLocks(userDataDir);
     this.cleanStaleLocks(path.join(userDataDir, 'Default'));
 
-    const isProduction =
-      process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+    const isCloudServer =
+      process.env.NODE_ENV === 'production' ||
+      !!process.env.RENDER ||
+      (process.platform !== 'win32' && process.platform !== 'darwin' && !process.env.DISPLAY);
     const isHeadless =
       process.env.HEADLESS !== undefined
         ? process.env.HEADLESS === 'true'
-        : isProduction;
+        : isCloudServer;
 
     let executablePath = this.ensureChromiumExecutable();
     console.log(`[CollectorService] Launching persistent context (headless: ${isHeadless}, executable: ${executablePath || 'Playwright default'})...`);
@@ -760,12 +762,21 @@ export class CollectorService {
       }
     }
 
-    const isProduction =
-      process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+    const isCloudServer =
+      process.env.NODE_ENV === 'production' ||
+      !!process.env.RENDER ||
+      (process.platform !== 'win32' && process.platform !== 'darwin' && !process.env.DISPLAY);
     const isHeadless =
       process.env.HEADLESS !== undefined
         ? process.env.HEADLESS === 'true'
-        : isProduction;
+        : isCloudServer;
+
+    if (isCloudServer && !process.env.LINKEDIN_LI_AT_COOKIE) {
+      this.activeCollections.delete(accountId);
+      throw new BadRequestException(
+        'LinkedIn collection on cloud (Render) runs in headless background mode and requires LINKEDIN_LI_AT_COOKIE. Please copy your "li_at" cookie from your browser and add it to your Render Dashboard Environment Variables.',
+      );
+    }
 
     let context: BrowserContext | null = null;
     let page: Page | null = null;
@@ -774,9 +785,9 @@ export class CollectorService {
     try {
       context = await this.launchBrowserWithRetry(userDataDir);
 
-      // Only inject cookie if in production cloud (Render) or explicitly requested
+      // Only inject cookie if in cloud (Render) or explicitly requested
       // On local machine, the persistent browser profile handles sessions natively
-      const shouldInjectCookie = isProduction || process.env.FORCE_COOKIE_INJECTION === 'true';
+      const shouldInjectCookie = isCloudServer || process.env.FORCE_COOKIE_INJECTION === 'true';
 
       if (shouldInjectCookie && process.env.LINKEDIN_LI_AT_COOKIE) {
         const rawCookie = process.env.LINKEDIN_LI_AT_COOKIE.trim().replace(/^["']|["']$/g, '');
@@ -827,7 +838,7 @@ export class CollectorService {
           navErr.message?.includes('ERR_TOO_MANY_REDIRECTS') ||
           navErr.message?.includes('too many redirects')
         ) {
-          if (isProduction) {
+          if (isCloudServer) {
             console.error('[CollectorService] ERR_TOO_MANY_REDIRECTS: LinkedIn rejected the session cookie on cloud.');
             if (context) await context.close();
             throw new BadRequestException(
@@ -898,7 +909,7 @@ export class CollectorService {
       console.log('------------------------------\n');
 
       if (!isAuthenticated) {
-        if (isHeadless) {
+        if (isHeadless || isCloudServer) {
           if (context) await context.close();
           console.log('=== LINKEDIN COLLECTION FAILED ===');
           throw new BadRequestException(

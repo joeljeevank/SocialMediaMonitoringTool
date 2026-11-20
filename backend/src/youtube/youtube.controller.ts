@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Query, Body, Res, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Body, Res, Req, HttpCode } from '@nestjs/common';
 import type { Response } from 'express';
 import { YoutubeService } from './youtube.service';
 
@@ -7,8 +7,8 @@ export class YoutubeController {
   constructor(private readonly youtubeService: YoutubeService) {}
 
   @Get('config')
-  getConfig() {
-    return this.youtubeService.getConfig();
+  getConfig(@Req() req: any) {
+    return this.youtubeService.getConfig(req);
   }
 
   @Post('config')
@@ -24,12 +24,12 @@ export class YoutubeController {
   }
 
   @Get('auth/url')
-  getAuthUrl() {
-    return this.youtubeService.getAuthUrl();
+  getAuthUrl(@Req() req: any) {
+    return this.youtubeService.getAuthUrl(req);
   }
 
   @Get('auth/callback')
-  async handleCallback(@Query('code') code: string, @Query('error') error: string, @Res() res: Response) {
+  async handleCallback(@Query('code') code: string, @Query('error') error: string, @Req() req: any, @Res() res: Response) {
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
     if (error) {
       let friendly = error;
@@ -40,7 +40,7 @@ export class YoutubeController {
     }
 
     try {
-      const channel = await this.youtubeService.handleAuthCallback(code);
+      const channel = await this.youtubeService.handleAuthCallback(code, req);
       return res.redirect(
         `${frontendUrl}/dashboard/youtube?status=connected&channelId=${channel.id}&title=${encodeURIComponent(channel.title)}`,
       );

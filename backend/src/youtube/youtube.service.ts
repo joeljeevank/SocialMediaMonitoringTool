@@ -73,7 +73,23 @@ export class YoutubeService implements OnModuleInit {
     private readonly analyticsRepo: Repository<YouTubeAnalytics>,
   ) {}
 
-  getConfig(): {
+  private resolveRedirectUri(req?: any): string {
+    let redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const isCloud = process.env.NODE_ENV === 'production' || !!process.env.RENDER || (process.platform !== 'win32' && !process.env.DISPLAY);
+
+    // If running in cloud production and redirectUri is unset or contains localhost, auto-derive from request host
+    if (req && (!redirectUri || (isCloud && redirectUri.includes('localhost')))) {
+      const host = req.headers?.['x-forwarded-host'] || req.headers?.['host'];
+      const proto = req.headers?.['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+      if (host && !host.includes('localhost')) {
+        return `${proto}://${host}/api/youtube/auth/callback`;
+      }
+    }
+
+    return redirectUri || 'http://localhost:3001/api/youtube/auth/callback';
+  }
+
+  getConfig(req?: any): {
     oauthConfigured: boolean;
     apiKeyConfigured: boolean;
     redirectUri: string;
@@ -82,7 +98,7 @@ export class YoutubeService implements OnModuleInit {
   } {
     const clientId = process.env.GOOGLE_CLIENT_ID || '';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/youtube/auth/callback';
+    const redirectUri = this.resolveRedirectUri(req);
     const apiKey = process.env.YOUTUBE_API_KEY || '';
 
     return {
@@ -120,10 +136,10 @@ export class YoutubeService implements OnModuleInit {
     };
   }
 
-  private getOAuth2Client() {
+  private getOAuth2Client(req?: any) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/youtube/auth/callback';
+    const redirectUri = this.resolveRedirectUri(req);
 
     if (!clientId || !clientSecret) {
       throw new BadRequestException(
@@ -134,9 +150,9 @@ export class YoutubeService implements OnModuleInit {
     return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
   }
 
-  getAuthUrl(): { url: string; configured: boolean } {
+  getAuthUrl(req?: any): { url: string; configured: boolean } {
     try {
-      const oauth2Client = this.getOAuth2Client();
+      const oauth2Client = this.getOAuth2Client(req);
       const scopes = [
         'https://www.googleapis.com/auth/youtube.readonly',
         'https://www.googleapis.com/auth/yt-analytics.readonly',
@@ -156,12 +172,12 @@ export class YoutubeService implements OnModuleInit {
     }
   }
 
-  async handleAuthCallback(code: string): Promise<YouTubeChannel> {
+  async handleAuthCallback(code: string, req?: any): Promise<YouTubeChannel> {
     if (!code) {
       throw new BadRequestException('Authorization code is missing');
     }
 
-    const oauth2Client = this.getOAuth2Client();
+    const oauth2Client = this.getOAuth2Client(req);
 
     let tokens: any;
     try {
